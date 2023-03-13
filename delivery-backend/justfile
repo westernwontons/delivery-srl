@@ -1,0 +1,8 @@
+alias r := run
+alias b := build
+
+run:
+	RUST_LOG="tower_http=info" cargo run
+
+build:
+	cargo build
