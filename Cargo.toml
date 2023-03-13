@@ -1,4 +1,0 @@
-[workspace]
-members = [
-	"delivery-backend",
-]
