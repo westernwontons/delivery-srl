@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.69"
-axum = "0.6.9"
-axum-extra = "0.6.0"
-axum-macros = "0.3.4"
+anyhow = "1.0.70"
+axum = "0.6.11"
+axum-extra = "0.7.1"
+axum-macros = "0.3.6"
 edgedb-derive = "0.4.0"
 edgedb-protocol = "0.4.0"
 edgedb-tokio = "0.3.0"
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { version = "1.0.158", features = ["derive"] }
 serde_json = "1.0.94"
-thiserror = "1.0.39"
-tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "fs", "macros", "parking_lot"] }
+thiserror = "1.0.40"
+tokio = { version = "1.26.0", features = ["rt", "rt-multi-thread", "fs", "macros", "parking_lot"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.0", features = ["trace"] }
 tracing = "0.1.37"

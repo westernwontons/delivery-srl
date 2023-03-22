@@ -3,17 +3,19 @@ use axum::{
     Router
 };
 
+use crate::state::AppState;
+
 /// Add a new client
 ///
 /// Adds a new client to the database.
-pub async fn add_client() {
+async fn add_client() {
     todo!()
 }
 
 /// Edit a client
 ///
 /// Edits an existing client in the database.
-pub async fn edit_client() {
+async fn edit_client() {
     todo!()
 }
 
@@ -22,7 +24,7 @@ pub async fn edit_client() {
 /// Clients can become inactive when they stop being a customer.
 /// The requirement is to keep the data associated with them,
 /// whether they're still an active client or not.
-pub async fn activate_client() {
+async fn activate_client() {
     todo!()
 }
 
@@ -31,7 +33,7 @@ pub async fn activate_client() {
 /// Clients can become inactive when they stop being a customer.
 /// The requirement is to keep the data associated with them,
 /// whether they're still an active client or not.
-pub async fn deactivate_client() {
+async fn deactivate_client() {
     todo!()
 }
 
@@ -39,16 +41,16 @@ pub async fn deactivate_client() {
 ///
 /// Clients that are expired, as in their boiler or whatever is due for a checkup
 /// are retrieved using this endpoint.
-pub async fn expired_clients() {
+async fn expired_clients() {
     todo!()
 }
 
 /// Router for client related operations.
 ///
 /// Any action done on a client resource is registered here.
-pub fn client_router() -> Router {
+pub fn client_router() -> Router<AppState> {
     Router::new()
-        .route("/add", post(add_client))
+        .route("/create", post(add_client))
         .route("/edit", post(edit_client))
         .route("/activate", post(activate_client))
         .route("/deactivate", post(deactivate_client))

@@ -2,7 +2,11 @@ use axum::{
     routing::{get, post},
     Router
 };
-use delivery_backend::routes;
+use delivery_backend::{
+    routes,
+    state::{setup_app_state, AppState}
+};
+use edgedb_tokio::Error as EdgeDbError;
 use std::net::SocketAddr;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
@@ -19,22 +23,24 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn setup_app() -> Router {
+async fn setup_app() -> Result<Router, EdgeDbError> {
     let middleware_stack =
         ServiceBuilder::new().layer(TraceLayer::new_for_http());
+    let app_state = setup_app_state().await?;
 
-    Router::<()>::new()
+    Ok(Router::<AppState>::new()
         .route("/search", post(routes::search))
         .route("/history", get(routes::history))
         .nest("/client", routes::client_router())
         .route_layer(middleware_stack)
+        .with_state(app_state))
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let app = setup_app();
+    let app = setup_app().await?;
 
     run_app(app).await?;
 

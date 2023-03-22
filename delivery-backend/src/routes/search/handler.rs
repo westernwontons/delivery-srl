@@ -3,7 +3,3 @@
 pub async fn search() {
     todo!()
 }
-
-/// Represents a search query for clients
-#[derive(serde::Serialize, serde::Deserialize)]
-struct SearchQuery {}
