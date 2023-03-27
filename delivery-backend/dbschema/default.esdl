@@ -1,5 +1,6 @@
 module default {
 	scalar type OperationPerformed extending enum<VTP, INT, PIF, RGAZ, VGAZ>; # operatia_efect
+	scalar type CustomerStatus extending enum<Active, Inactive>;
 	
 	type Address {
 		required property county -> str; # judet
@@ -17,26 +18,22 @@ module default {
 		required property operation_performed -> OperationPerformed; # operatia_efect
 		required property number -> str; # numar
 		required property date -> datetime; # data
-		required property expiry_date -> datetime; # scadenta
+		required property expiration_date -> datetime; # scadenta
 		property observations -> str; # observatii
 		required property last_updated -> datetime {
 			default := datetime_current();
 		};
-		required property is_active -> bool {
-			default := true;
-		}
-		required property is_expired -> bool {
-			default := false;
-		}
-		required property is_handled -> bool {
-			default := false;
-		}
+		required property expired := .expiration_date > (.expiration_date - <duration>"3 days");
 	}
 
-	type Client {
-		required property document_id -> str; # dosar
+	type Customer {
+		required property customer_id -> str; # dosar
 		required property name -> str; # destinator_utilizator
-		required link address -> Address; # adresa
-		required link appliance -> Appliance;
+		required property status -> CustomerStatus {
+			default := CustomerStatus.Active
+		}
+		multi link address -> Address; # adresa
+		multi link appliance -> Appliance;
+		index on (.customer_id);
 	}
 }

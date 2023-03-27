@@ -1,5 +1,5 @@
 mod handler;
-mod query;
+mod search_query;
 
-pub use handler::search;
-pub use query::SearchQuery;
+pub use handler::customer_search;
+pub use search_query::SearchQuery;

@@ -23,15 +23,18 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// App setup
+///
+/// Initializes the root router, middlewares and the app state
 async fn setup_app() -> Result<Router, EdgeDbError> {
     let middleware_stack =
         ServiceBuilder::new().layer(TraceLayer::new_for_http());
     let app_state = setup_app_state().await?;
 
     Ok(Router::<AppState>::new()
-        .route("/search", post(routes::search))
-        .route("/history", get(routes::history))
-        .nest("/client", routes::client_router())
+        .route("/search", post(routes::customer_search))
+        .route("/history", get(routes::customer_history))
+        .nest("/customer", routes::customer_router())
         .route_layer(middleware_stack)
         .with_state(app_state))
 }
