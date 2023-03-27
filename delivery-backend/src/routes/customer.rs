@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 
 use crate::customer::DeliveryCustomer;
-use crate::expiration::ExpirationRange;
+use crate::expiration::TimeRange;
 use crate::state::AppState;
 use axum::{
     extract::{Path, Query, State},
@@ -65,7 +65,7 @@ async fn deactivate_customer(
 #[axum_macros::debug_handler]
 async fn expired_customers(
     State(state): State<AppState>,
-    Query(expiration_range): Query<ExpirationRange>
+    Query(expiration_range): Query<TimeRange>
 ) {
     todo!()
 }

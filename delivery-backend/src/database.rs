@@ -8,7 +8,7 @@
 use edgedb_tokio::{Client, Error as EdgeDbError};
 use std::sync::Arc;
 
-use crate::{customer::DeliveryCustomer, expiration::ExpirationRange};
+use crate::{customer::DeliveryCustomer, expiration::TimeRange};
 
 pub struct Database {
     client: Client
@@ -42,9 +42,9 @@ impl Database {
 
     /// Fetch expired [`DeliveryCustomer`]s
     ///
-    /// An [`ExpirationRange`] can be provided, which will be used to
+    /// Optionally, an [`ExpirationRange`] can be provided, which will be used to
     /// only return [`DeliveryCustomer`]s between a given time range
-    async fn expired_customers(&self, range: Option<ExpirationRange>) {
+    async fn expired_customers(&self, range: Option<TimeRange>) {
         todo!()
     }
 }
