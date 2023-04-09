@@ -7,8 +7,13 @@
 )]
 
 use crate::expiration::TimeRange;
+use crate::responses::{
+    DeleteResultResponse, InsertOneResultResponse, UpdateResultResponse
+};
 use crate::state::AppState;
+use crate::update::PartialDeliveryCustomer;
 use crate::{app_error::AppError, customer::DeliveryCustomer};
+use axum::routing::{delete, patch};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -16,6 +21,7 @@ use axum::{
     routing::{get, post, put},
     Json, Router
 };
+use mongodb::results::InsertOneResult;
 
 /// Add a new [`DeliveryCustomer`]
 ///
@@ -24,8 +30,8 @@ use axum::{
 async fn create_customer(
     State(state): State<AppState>,
     Json(customer): Json<DeliveryCustomer>
-) -> Result<(), AppError> {
-    todo!()
+) -> Result<UpdateResultResponse, AppError> {
+    Ok(state.database().upsert_customer(customer).await?.into())
 }
 
 /// Edit a [`DeliveryCustomer`]
@@ -34,9 +40,9 @@ async fn create_customer(
 #[axum_macros::debug_handler]
 async fn update_customer(
     State(state): State<AppState>,
-    Json(customer): Json<DeliveryCustomer>
-) {
-    todo!()
+    Json(customer): Json<PartialDeliveryCustomer>
+) -> Result<UpdateResultResponse, AppError> {
+    Ok(state.database().update_customer(customer).await?.into())
 }
 
 /// Activate a [`DeliveryCustomer`]
@@ -49,8 +55,12 @@ async fn update_customer(
 async fn activate_customer(
     State(state): State<AppState>,
     Path(customer_id): Path<String>
-) {
-    todo!()
+) -> Result<UpdateResultResponse, AppError> {
+    Ok(state
+        .database()
+        .activate_customer(customer_id)
+        .await?
+        .into())
 }
 
 /// Deactivate a [`DeliveryCustomer`]
@@ -63,8 +73,20 @@ async fn activate_customer(
 async fn deactivate_customer(
     State(state): State<AppState>,
     Path(customer_id): Path<String>
-) {
-    todo!()
+) -> Result<UpdateResultResponse, AppError> {
+    Ok(state
+        .database()
+        .deactivate_customer(customer_id)
+        .await?
+        .into())
+}
+
+#[axum_macros::debug_handler]
+async fn delete_customer(
+    State(state): State<AppState>,
+    Path(customer_id): Path<String>
+) -> Result<DeleteResultResponse, AppError> {
+    Ok(state.database().delete_customer(customer_id).await?.into())
 }
 
 /// Retrieve expired [`DeliveryCustomer`]s
@@ -85,7 +107,8 @@ pub fn customer_router() -> Router<AppState> {
     Router::new()
         .route("/create", post(create_customer))
         .route("/update", put(update_customer))
-        .route("/activate/:customer_id", get(activate_customer))
-        .route("/deactivate/:customer_id", get(deactivate_customer))
+        .route("/activate/:customer_id", patch(activate_customer))
+        .route("/deactivate/:customer_id", patch(deactivate_customer))
+        .route("/delete/:customer_id", delete(delete_customer))
         .route("/expired", get(expired_customers))
 }

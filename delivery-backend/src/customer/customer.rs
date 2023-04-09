@@ -1,3 +1,5 @@
+use mongodb::bson::Document;
+
 use super::{Address, Appliance};
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -39,6 +41,7 @@ impl std::str::FromStr for CustomerStatus {
 pub struct DeliveryCustomer {
     pub customer_id: String,
     pub name: String,
+    pub active: bool,
     pub address: Address,
     pub appliance: Appliance
 }
@@ -48,14 +51,34 @@ impl DeliveryCustomer {
     pub fn new(
         customer_id: String,
         name: String,
+        active: bool,
         address: Address,
         appliance: Appliance
     ) -> Self {
         Self {
             customer_id,
             name,
+            active,
             address,
             appliance
         }
+    }
+
+    /// Convert a [`DeliveryCustomer`] into a MongoDB [`Document`]
+    /// for update operations
+    pub fn into_update_document(self) -> Document {
+        let address_document = self.address.into_document();
+        let appliance_document = self.appliance.into_document();
+        let mut inner_document = Document::default();
+        let mut document = Document::default();
+
+        inner_document.insert("name", self.name);
+        inner_document.insert("active", self.active);
+        inner_document.insert("address", address_document);
+        inner_document.insert("appliance", appliance_document);
+
+        document.insert("$set", inner_document);
+
+        document
     }
 }

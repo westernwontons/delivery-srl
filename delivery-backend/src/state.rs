@@ -23,6 +23,8 @@ impl AppState {
 }
 
 /// Setup the application wide state
+#[tracing::instrument]
 pub async fn setup_app_state() -> Result<AppState, AppError> {
+    tracing::info!("Setting up AppState");
     Ok(AppState::new(setup_database().await?))
 }

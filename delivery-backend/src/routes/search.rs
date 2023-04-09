@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 
 use crate::state::AppState;
-use crate::update::PartialCustomerUpdate;
+use crate::update::PartialDeliveryCustomer;
 use axum::{extract::State, Json};
 
 /// Search for a [`DeliveryCustomer`] in the database.
@@ -10,7 +10,7 @@ use axum::{extract::State, Json};
 #[axum_macros::debug_handler]
 pub async fn customer_search(
     State(state): State<AppState>,
-    Json(search): Json<PartialCustomerUpdate>
+    Json(search): Json<PartialDeliveryCustomer>
 ) {
     todo!()
 }
