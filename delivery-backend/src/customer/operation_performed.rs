@@ -2,7 +2,7 @@
 ///
 /// Each have their own meaning, but honestly I lack the domain
 /// knowledge for that.
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum OperationPerformed {
     VTP,
     INT,

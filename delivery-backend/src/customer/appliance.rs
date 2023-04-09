@@ -1,28 +1,22 @@
 use super::OperationPerformed;
-use edgedb_derive::Queryable;
-
-pub type FixedOffsetDateTime = chrono::DateTime<chrono::FixedOffset>;
 
 /// Represents some kind of [`Appliance`]
 ///
 /// We don't know or care about the appliance (but they're mostly water heaters).
 /// They have some operation performed on them for the [`DeliveryCustomer`], which we know from
 /// the [`OperationPerformed`] field.
-#[allow(dead_code)]
-#[derive(Queryable, serde::Serialize, serde::Deserialize)]
-#[edgedb(json)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Appliance {
-    manufacturer: String,
-    year_of_manufacture: String,
-    model: String,
-    r#type: String,
-    warranty: String,
-    operation_performed: OperationPerformed,
-    number: String,
-    date: String,
-    expiry_date: String,
-    observations: Option<String>,
-    last_updated: FixedOffsetDateTime
+    pub manufacturer: String,
+    pub year_of_manufacture: String,
+    pub model: String,
+    pub r#type: String,
+    pub warranty: chrono::DateTime<chrono::FixedOffset>,
+    pub operation_performed: OperationPerformed,
+    pub number: String,
+    pub date: chrono::DateTime<chrono::FixedOffset>,
+    pub expiration_date: chrono::DateTime<chrono::FixedOffset>,
+    pub observations: Option<String>
 }
 
 impl Appliance {
@@ -32,13 +26,12 @@ impl Appliance {
         year_of_manufacture: String,
         model: String,
         r#type: String,
-        warranty: String,
+        warranty: chrono::DateTime<chrono::FixedOffset>,
         operation_performed: OperationPerformed,
         number: String,
-        date: String,
-        expiry_date: String,
-        observations: Option<String>,
-        last_updated: FixedOffsetDateTime
+        date: chrono::DateTime<chrono::FixedOffset>,
+        expiration_date: chrono::DateTime<chrono::FixedOffset>,
+        observations: Option<String>
     ) -> Self {
         Self {
             manufacturer,
@@ -49,9 +42,8 @@ impl Appliance {
             operation_performed,
             number,
             date,
-            expiry_date,
-            observations,
-            last_updated
+            expiration_date,
+            observations
         }
     }
 }

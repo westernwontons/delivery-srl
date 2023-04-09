@@ -1,10 +1,18 @@
-#![allow(unused_variables)]
+#![allow(
+    unused_variables,
+    unused_mut,
+    unused_imports,
+    dead_code,
+    unused_assignments
+)]
 
-use crate::customer::DeliveryCustomer;
 use crate::expiration::TimeRange;
 use crate::state::AppState;
+use crate::{app_error::AppError, customer::DeliveryCustomer};
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
     routing::{get, post, put},
     Json, Router
 };
@@ -16,7 +24,7 @@ use axum::{
 async fn create_customer(
     State(state): State<AppState>,
     Json(customer): Json<DeliveryCustomer>
-) {
+) -> Result<(), AppError> {
     todo!()
 }
 
@@ -24,7 +32,7 @@ async fn create_customer(
 ///
 /// Edits an existing [`DeliveryCustomer`] in the database.
 #[axum_macros::debug_handler]
-async fn edit_customer(
+async fn update_customer(
     State(state): State<AppState>,
     Json(customer): Json<DeliveryCustomer>
 ) {
@@ -76,7 +84,7 @@ async fn expired_customers(
 pub fn customer_router() -> Router<AppState> {
     Router::new()
         .route("/create", post(create_customer))
-        .route("/update", put(edit_customer))
+        .route("/update", put(update_customer))
         .route("/activate/:customer_id", get(activate_customer))
         .route("/deactivate/:customer_id", get(deactivate_customer))
         .route("/expired", get(expired_customers))

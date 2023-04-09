@@ -1,14 +1,10 @@
-use edgedb_derive::Queryable;
-
 /// Represents the [`Address`] of a [`DeliveryCustomer`]
-#[allow(dead_code)]
-#[derive(Queryable, serde::Deserialize, serde::Serialize)]
-#[edgedb(json)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Address {
-    county: String,
-    street: String,
-    number: String,
-    additional: String
+    pub county: String,
+    pub street: String,
+    pub number: String,
+    pub additional: String
 }
 
 impl Address {

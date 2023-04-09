@@ -5,38 +5,43 @@
     dead_code,
     unused_assignments
 )]
-use edgedb_tokio::{Client, Error as EdgeDbError};
-use std::sync::Arc;
 
-use crate::{customer::DeliveryCustomer, expiration::TimeRange};
+use crate::app_error::AppError;
+use crate::expiration::TimeRange;
+use crate::{customer::DeliveryCustomer, update::PartialCustomerUpdate};
+
+use axum::{http::StatusCode, response::IntoResponse};
+use mongodb::{options::ClientOptions, Client as MongoClient};
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct Database {
-    client: Client
+    client: MongoClient
 }
 
 impl Database {
     /// Creates a new [`Database`].
-    fn new(client: Client) -> Self {
+    pub fn new(client: MongoClient) -> Self {
         Self { client }
     }
 
     /// Commit a [`DeliveryCustomer`] to the database
-    async fn create_customer(&self, customer: DeliveryCustomer) {
+    pub async fn create_customer(&self, customer: DeliveryCustomer) {
         todo!()
     }
 
     /// Update a [`DeliveryCustomer`] in the database
-    async fn update_customer(&self, customer: DeliveryCustomer) {
+    pub async fn update_customer(&self, customer: PartialCustomerUpdate) {
         todo!()
     }
 
     /// Activate a [`DeliveryCustomer`]
-    async fn activate_customer(&self, customer_id: String) {
+    pub async fn activate_customer(&self, customer_id: String) {
         todo!()
     }
 
     /// Deactivate a [`DeliveryCustomer`]
-    async fn deactivate_customer(&self, customer_id: String) {
+    pub async fn deactivate_customer(&self, customer_id: String) {
         todo!()
     }
 
@@ -44,13 +49,14 @@ impl Database {
     ///
     /// Optionally, an [`ExpirationRange`] can be provided, which will be used to
     /// only return [`DeliveryCustomer`]s between a given time range
-    async fn expired_customers(&self, range: Option<TimeRange>) {
+    pub async fn expired_customers(&self, range: Option<TimeRange>) {
         todo!()
     }
 }
 
-/// Initialize the [`Database`] with an EdgeDB [`Client`]
-pub async fn setup_database() -> Result<Arc<Database>, EdgeDbError> {
-    let edgedb_client = edgedb_tokio::create_client().await?;
-    Ok(Arc::new(Database::new(edgedb_client)))
+/// Initialize the [`Database`] with a MongoDB [`MongoClient`]
+pub async fn setup_database() -> Result<Arc<Database>, AppError> {
+    let options = ClientOptions::parse("mongodb://localhost:27017").await?;
+    let mongodb_client = MongoClient::with_options(options)?;
+    Ok(Arc::new(Database::new(mongodb_client)))
 }

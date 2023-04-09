@@ -1,0 +1,29 @@
+version: '3.8'
+
+networks:
+  delivery_srl_mongodb_network:
+
+
+services:
+  delivery_srl_mongodb:
+    image: mongo:latest
+    container_name: delivery_srl_mongodb
+    command: mongod --replSet rs --port 27017
+    expose:
+      - 27017
+    ports:
+      - 27017:27017
+    networks:
+      - delivery_srl_mongodb_network
+
+  delivery_srl_mongodb_init:
+    image: mongo:latest
+    container_name: delivery_srl_mongodb_init
+    depends_on:
+      - delivery_srl_mongodb
+    volumes:
+      - ./init-replica-set.js:/init-replica-set.js
+    networks:
+      - delivery_srl_mongodb_network
+
+    command: "bash -c 'sleep 7 && mongosh --host delivery_srl_mongodb --port 27017 /init-replica-set.js'"
