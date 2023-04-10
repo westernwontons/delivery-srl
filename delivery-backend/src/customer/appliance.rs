@@ -25,34 +25,6 @@ pub struct ApplianceIn {
 }
 
 impl ApplianceIn {
-    #[allow(clippy::too_many_arguments)]
-    /// Creates a new [`Appliance`].
-    pub fn new(
-        manufacturer: String,
-        year_of_manufacture: String,
-        model: String,
-        r#type: String,
-        warranty: chrono::DateTime<chrono::FixedOffset>,
-        operation_performed: OperationPerformed,
-        number: String,
-        date: chrono::DateTime<chrono::FixedOffset>,
-        expiration_date: chrono::DateTime<chrono::FixedOffset>,
-        observations: Option<String>
-    ) -> Self {
-        Self {
-            manufacturer,
-            year_of_manufacture,
-            model,
-            r#type,
-            warranty,
-            operation_performed,
-            number,
-            date,
-            expiration_date,
-            observations
-        }
-    }
-
     /// Convert [`Self`] into a MongoDB [`Document`]
     pub fn into_document(self) -> Document {
         let convert = |key: String, value: ApplianceField| {
