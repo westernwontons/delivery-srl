@@ -1,30 +1,28 @@
 use axum::response::IntoResponse;
 use axum::{http::StatusCode, Json};
-use mongodb::bson::Bson;
+use mongodb::bson::oid::ObjectId;
 use mongodb::results::DeleteResult;
 use mongodb::results::{InsertOneResult, UpdateResult};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct InsertOneResultResponse {
-    inserted_id: Bson
+    inserted_id: ObjectId
 }
 
 impl IntoResponse for InsertOneResultResponse {
     fn into_response(self) -> axum::response::Response {
-        let inserted_id = match self.inserted_id {
-            Bson::ObjectId(id) => {
-                Json(serde_json::json!({ "inserted_id": id.to_string() }))
-            }
-            _ => unreachable!()
-        };
-        (StatusCode::CREATED, inserted_id).into_response()
+        (
+            StatusCode::CREATED,
+            Json(serde_json::json!({ "inserted_id": self.inserted_id.to_string() }))
+        )
+            .into_response()
     }
 }
 
 impl From<InsertOneResult> for InsertOneResultResponse {
     fn from(value: InsertOneResult) -> Self {
         Self {
-            inserted_id: value.inserted_id
+            inserted_id: value.inserted_id.as_object_id().unwrap()
         }
     }
 }
@@ -33,22 +31,17 @@ impl From<InsertOneResult> for InsertOneResultResponse {
 pub struct UpdateResultResponse {
     matched_count: u64,
     modified_count: u64,
-    upserted_id: Option<Bson>
+    upserted_id: Option<ObjectId>
 }
 
 impl IntoResponse for UpdateResultResponse {
     fn into_response(self) -> axum::response::Response {
-        let upserted_id = if let Some(Bson::ObjectId(oid)) = self.upserted_id {
-            Some(oid.to_string())
-        } else {
-            None
-        };
         (
             StatusCode::OK,
             Json(serde_json::json!({
                 "matched_count": self.matched_count,
                 "modified_count": self.modified_count,
-                "upserted_id": upserted_id,
+                "upserted_id": self.upserted_id,
             }))
         )
             .into_response()
@@ -58,7 +51,7 @@ impl IntoResponse for UpdateResultResponse {
 impl From<UpdateResult> for UpdateResultResponse {
     fn from(value: UpdateResult) -> Self {
         Self {
-            upserted_id: value.upserted_id,
+            upserted_id: value.upserted_id.and_then(|i| i.as_object_id()),
             matched_count: value.matched_count,
             modified_count: value.matched_count
         }

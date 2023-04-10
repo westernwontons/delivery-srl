@@ -1,14 +1,17 @@
-use mongodb::bson::{Bson, Document};
+use mongodb::bson::{self, Bson, Document};
+use serde::{Deserialize, Deserializer};
+
+use crate::appliance_field::ApplianceField;
 
 use super::OperationPerformed;
 
-/// Represents some kind of [`Appliance`]
+/// Represents some kind of [`ApplianceIn`]
 ///
 /// We don't know or care about the appliance (but they're mostly water heaters).
-/// They have some operation performed on them for the [`DeliveryCustomer`], which we know from
+/// They have some operation performed on them for the [`DeliveryCustomerIn`], which we know from
 /// the [`OperationPerformed`] field.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct Appliance {
+pub struct ApplianceIn {
     pub manufacturer: String,
     pub year_of_manufacture: String,
     pub model: String,
@@ -21,7 +24,8 @@ pub struct Appliance {
     pub observations: Option<String>
 }
 
-impl Appliance {
+impl ApplianceIn {
+    #[allow(clippy::too_many_arguments)]
     /// Creates a new [`Appliance`].
     pub fn new(
         manufacturer: String,
@@ -56,7 +60,8 @@ impl Appliance {
                 key,
                 match value {
                     ApplianceField::String(string) => Bson::String(string),
-                    ApplianceField::DateTime(dt) => Bson::DateTime(dt.into())
+                    ApplianceField::DateTime(dt) => Bson::DateTime(dt.into()),
+                    _ => unimplemented!()
                 }
             )
         };
@@ -66,24 +71,7 @@ impl Appliance {
     }
 }
 
-pub enum ApplianceField {
-    String(String),
-    DateTime(chrono::DateTime<chrono::FixedOffset>)
-}
-
-impl From<String> for ApplianceField {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<chrono::DateTime<chrono::FixedOffset>> for ApplianceField {
-    fn from(value: chrono::DateTime<chrono::FixedOffset>) -> Self {
-        Self::DateTime(value)
-    }
-}
-
-impl IntoIterator for Appliance {
+impl IntoIterator for ApplianceIn {
     type Item = (String, ApplianceField);
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -112,4 +100,37 @@ impl IntoIterator for Appliance {
         ]
         .into_iter()
     }
+}
+
+/// Represents some kind of `Appliance`
+///
+/// We don't know or care about the appliance (but they're mostly water heaters).
+/// They have some operation performed on them for the [`DeliveryCustomerIn`], which we know from
+/// the [`OperationPerformed`] field.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ApplianceOut {
+    pub manufacturer: String,
+    pub year_of_manufacture: String,
+    pub model: String,
+    pub r#type: String,
+    #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
+    pub warranty: chrono::DateTime<chrono::Utc>,
+    pub operation_performed: OperationPerformed,
+    pub number: String,
+    #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
+    pub date: chrono::DateTime<chrono::Utc>,
+    #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
+    pub expiration_date: chrono::DateTime<chrono::Utc>,
+    pub observations: Option<String>
+}
+
+/// Deserializes a [`chrono::DateTime`] from a [`mongodb::bson::DateTime`].
+pub fn deserialize_chrono_from_bson_datetime<'de, D>(
+    deserializer: D
+) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
+where
+    D: Deserializer<'de>
+{
+    let datetime = bson::DateTime::deserialize(deserializer)?;
+    Ok(datetime.to_chrono())
 }

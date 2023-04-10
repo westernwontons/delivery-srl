@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use crate::{
-    app_error::AppError,
-    database::{setup_database, Database}
-};
+use crate::database::{setup_database, Database};
+use crate::error::AppError;
 
 #[derive(Clone)]
 pub struct AppState {

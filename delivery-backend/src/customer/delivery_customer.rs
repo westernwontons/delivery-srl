@@ -1,6 +1,8 @@
+use mongodb::bson::oid::ObjectId;
+use mongodb::bson::serde_helpers::serialize_object_id_as_hex_string;
 use mongodb::bson::Document;
 
-use super::{Address, Appliance};
+use super::{appliance::ApplianceOut, Address, ApplianceIn};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -33,29 +35,41 @@ impl std::str::FromStr for CustomerStatus {
     }
 }
 
-/// Represents a customer
+/////////////////////////////////////////////////////////////////////////////
+
+/// Represents a customer that's going IN to the database.
+///
+/// Because of how `BSON` is serialized, this distinction is
+/// necessary for a couple of reasons:
+///
+/// * The field with `ObjectId` has to be named `_id`.
+/// * The `appliance` field has datetimes from `chrono`
+/// that don't play well with `BSON`.
 ///
 /// Customers get the appliances checked for certain things.
 /// That name of the operation is carried by the `OperationPerformed` enum.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct DeliveryCustomer {
+pub struct DeliveryCustomerIn {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
     pub customer_id: String,
     pub name: String,
     pub active: bool,
     pub address: Address,
-    pub appliance: Appliance
+    pub appliance: ApplianceIn
 }
 
-impl DeliveryCustomer {
-    /// Creates a new [`DeliveryCustomer`].
+impl DeliveryCustomerIn {
+    /// Creates a new [`DeliveryCustomerIn`].
     pub fn new(
         customer_id: String,
         name: String,
         active: bool,
         address: Address,
-        appliance: Appliance
+        appliance: ApplianceIn
     ) -> Self {
         Self {
+            id: ObjectId::new(),
             customer_id,
             name,
             active,
@@ -64,7 +78,7 @@ impl DeliveryCustomer {
         }
     }
 
-    /// Convert a [`DeliveryCustomer`] into a MongoDB [`Document`]
+    /// Convert a [`DeliveryCustomerIn`] into a MongoDB [`Document`]
     /// for update operations
     pub fn into_update_document(self) -> Document {
         let address_document = self.address.into_document();
@@ -81,4 +95,23 @@ impl DeliveryCustomer {
 
         document
     }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+/// [`DeliveryCustomerOut`] is the version of `DeliveryCustomer`
+/// that is returned to the client. This separation is necessary,
+/// because serialized BSON is ugly.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct DeliveryCustomerOut {
+    #[serde(
+        serialize_with = "serialize_object_id_as_hex_string",
+        rename = "_id"
+    )]
+    pub id: ObjectId,
+    pub customer_id: String,
+    pub name: String,
+    pub active: bool,
+    pub address: Address,
+    pub appliance: ApplianceOut
 }

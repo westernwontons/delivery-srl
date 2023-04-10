@@ -1,12 +1,8 @@
-use axum::{
-    routing::{get, post},
-    Router
-};
-use delivery_backend::{
-    app_error::AppError,
-    routes,
-    state::{setup_app_state, AppState}
-};
+use axum::routing::{get, post};
+use axum::Router;
+use delivery_backend::error::AppError;
+use delivery_backend::routes;
+use delivery_backend::state::{setup_app_state, AppState};
 use std::net::SocketAddr;
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;

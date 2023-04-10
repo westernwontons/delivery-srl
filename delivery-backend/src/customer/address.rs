@@ -1,7 +1,7 @@
 use mongodb::bson::{bson, Document};
 
 /// Represents the [`Address`] of a [`DeliveryCustomer`]
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Address {
     pub county: String,
     pub street: String,

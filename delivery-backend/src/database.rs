@@ -1,15 +1,15 @@
-use crate::app_error::AppError;
-use crate::expiration::TimeRange;
+use crate::customer::{DeliveryCustomerIn, ExpiredCustomerList};
+use crate::error::AppError;
+use crate::query::ExpiredCustomersQuery;
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
-use crate::{customer::DeliveryCustomer, update::PartialDeliveryCustomer};
+use crate::{customer::DeliveryCustomerOut, query::PartialDeliveryCustomer};
 
-use mongodb::bson::doc;
+use mongodb::bson::{self, doc};
 use mongodb::options::ClientOptions;
 use mongodb::options::UpdateOptions;
-use mongodb::{
-    Client as MongoClient, Collection as MongoCollection,
-    Database as MongoDatabase
-};
+use mongodb::Client as MongoClient;
+use mongodb::Collection as MongoCollection;
+use mongodb::Database as MongoDatabase;
 use std::sync::Arc;
 
 pub struct Database {
@@ -28,14 +28,16 @@ impl Database {
     }
 
     /// Returns the `customer` collection from `MongoDB`.
-    fn customer_collection(&self) -> MongoCollection<DeliveryCustomer> {
+    fn customer_collection(&self) -> MongoCollection<DeliveryCustomerIn> {
         self.get_database().collection("customer")
     }
 
-    /// Commit a [`DeliveryCustomer`] to the database
+    /// Commit a [`DeliveryCustomerIn`] to the database
+    ///
+    /// If the customer already exists, update that customer with the new fields.
     pub async fn upsert_customer(
         &self,
-        customer: DeliveryCustomer
+        customer: DeliveryCustomerIn
     ) -> Result<UpdateResultResponse, AppError> {
         Ok(self
             .customer_collection()
@@ -112,6 +114,7 @@ impl Database {
             .into())
     }
 
+    /// Delete a [`DeliveryCustomer`]
     pub async fn delete_customer(
         &self,
         customer_id: String
@@ -123,13 +126,33 @@ impl Database {
             .into())
     }
 
-    /// Fetch expired [`DeliveryCustomer`]s
+    /// Fetch expired customers
     ///
-    /// Optionally, an [`ExpirationRange`] can be provided, which will be used to
-    /// only return [`DeliveryCustomer`]s between a given time range
-    #[allow(unused_variables)]
-    pub async fn expired_customers(&self, range: Option<TimeRange>) {
-        todo!()
+    /// An [`ExpiredCustomersQuery`] contains the possible query parameters.
+    #[tracing::instrument(skip(self))]
+    pub async fn expired_customers(
+        &self,
+        time_range: ExpiredCustomersQuery
+    ) -> Result<ExpiredCustomerList, AppError> {
+        let mut cursor = self
+            .customer_collection()
+            .aggregate(time_range.as_aggregation(), None)
+            .await?;
+
+        let mut buffer = Vec::<DeliveryCustomerOut>::with_capacity(10);
+
+        while cursor.advance().await? {
+            match cursor.deserialize_current() {
+                Ok(document) => {
+                    let serialized =
+                        bson::from_document::<DeliveryCustomerOut>(document)?;
+                    buffer.push(serialized);
+                }
+                Err(err) => return Err(err.into())
+            };
+        }
+
+        Ok(buffer.into())
     }
 }
 

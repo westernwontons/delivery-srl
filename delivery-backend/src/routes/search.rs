@@ -1,10 +1,10 @@
 #![allow(unused_variables)]
 
+use crate::query::PartialDeliveryCustomer;
 use crate::state::AppState;
-use crate::update::PartialDeliveryCustomer;
 use axum::{extract::State, Json};
 
-/// Search for a [`DeliveryCustomer`] in the database.
+/// Search for a `DeliveryCustomer` in the database.
 ///
 /// Accepts a [`SearchQuery`] which contains all the possible fields to search for.
 #[axum_macros::debug_handler]

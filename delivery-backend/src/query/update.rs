@@ -1,6 +1,6 @@
-use mongodb::bson::{doc, Document};
-
+use crate::appliance_field::ApplianceField;
 use crate::customer::{CustomerStatus, OperationPerformed};
+use mongodb::bson::{doc, Document};
 
 /// Represents a request for searching or update [`DeliveryCustomer`]s
 ///
@@ -16,47 +16,67 @@ pub struct PartialDeliveryCustomer {
     pub number: Option<String>,
     pub additional: Option<String>,
     pub manufacturer: Option<String>,
-    pub year_of_manufacture: Option<String>,
+    pub year_of_manufacture: Option<u16>,
     pub model: Option<String>,
     pub r#type: Option<String>,
-    pub warranty: Option<String>,
+    pub warranty: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub operation_performed: Option<OperationPerformed>,
     pub appliance_number: Option<String>,
-    pub date: Option<String>,
-    pub expiration_date: Option<String>,
+    pub date: Option<chrono::DateTime<chrono::FixedOffset>>,
+    pub expiration_date: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub observations: Option<String>
 }
 
 impl IntoIterator for PartialDeliveryCustomer {
-    type Item = (String, Option<String>);
+    type Item = (String, Option<ApplianceField>);
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         // NOTE: `customer_id` is intentionally omitted
         vec![
-            ("name".into(), self.name),
+            ("name".into(), self.name.map(ApplianceField::from)),
             (
                 "status".into(),
-                self.status.map(|status| status.to_string())
+                self.status
+                    .map(|status| ApplianceField::from(status.to_string()))
             ),
-            ("county".into(), self.county),
-            ("street".into(), self.street),
-            ("number".into(), self.number),
-            ("additional".into(), self.additional),
-            ("manufacturer".into(), self.manufacturer),
-            ("year_of_manufacture".into(), self.year_of_manufacture),
-            ("model".into(), self.model),
-            ("type".into(), self.r#type),
-            ("warranty".into(), self.warranty),
+            ("county".into(), self.county.map(ApplianceField::from)),
+            ("street".into(), self.street.map(ApplianceField::from)),
+            ("number".into(), self.number.map(ApplianceField::from)),
+            (
+                "additional".into(),
+                self.additional.map(ApplianceField::from)
+            ),
+            (
+                "manufacturer".into(),
+                self.manufacturer.map(ApplianceField::from)
+            ),
+            (
+                "year_of_manufacture".into(),
+                self.year_of_manufacture.map(ApplianceField::from)
+            ),
+            ("model".into(), self.model.map(ApplianceField::from)),
+            ("type".into(), self.r#type.map(ApplianceField::from)),
+            ("warranty".into(), self.warranty.map(ApplianceField::from)),
             (
                 "operation_performed".into(),
-                self.operation_performed.map(|op_perf| op_perf.to_string())
+                self.operation_performed
+                    .map(|op_perf| ApplianceField::from(op_perf.to_string()))
             ),
-            ("appliance_number".into(), self.appliance_number),
-            ("date".into(), self.date),
-            ("expiration_date".into(), self.expiration_date),
-            ("observations".into(), self.observations),
+            (
+                "appliance_number".into(),
+                self.appliance_number.map(ApplianceField::from)
+            ),
+            ("date".into(), self.date.map(ApplianceField::from)),
+            (
+                "expiration_date".into(),
+                self.expiration_date.map(ApplianceField::from)
+            ),
+            (
+                "observations".into(),
+                self.observations.map(ApplianceField::from)
+            ),
         ]
         .into_iter()
     }
