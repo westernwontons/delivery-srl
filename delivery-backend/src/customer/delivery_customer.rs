@@ -1,10 +1,13 @@
 use mongodb::bson::oid::ObjectId;
 use mongodb::bson::serde_helpers::serialize_object_id_as_hex_string;
-use mongodb::bson::Document;
+use mongodb::bson::{self, Document};
+use mongodb::error::Error as MongoError;
+
+use crate::error::AppError;
 
 use super::{appliance::ApplianceOut, Address, ApplianceIn};
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CustomerStatus {
     Active,
@@ -114,4 +117,25 @@ pub struct DeliveryCustomerOut {
     pub active: bool,
     pub address: Address,
     pub appliance: ApplianceOut
+}
+
+impl TryFrom<Document> for DeliveryCustomerOut {
+    type Error = AppError;
+
+    fn try_from(value: Document) -> Result<Self, Self::Error> {
+        bson::from_document(value).map_err(AppError::from)
+    }
+}
+
+impl TryFrom<Result<Document, MongoError>> for DeliveryCustomerOut {
+    type Error = AppError;
+
+    fn try_from(
+        value: Result<Document, MongoError>
+    ) -> Result<Self, Self::Error> {
+        match value {
+            Ok(d) => bson::from_document(d).map_err(AppError::from),
+            Err(e) => Err(e.into())
+        }
+    }
 }

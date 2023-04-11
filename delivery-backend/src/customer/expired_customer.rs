@@ -4,15 +4,15 @@ use super::delivery_customer::DeliveryCustomerOut;
 
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
-pub struct ExpiredCustomerList(Vec<DeliveryCustomerOut>);
+pub struct DeliveryCustomerList(Vec<DeliveryCustomerOut>);
 
-impl IntoResponse for ExpiredCustomerList {
+impl IntoResponse for DeliveryCustomerList {
     fn into_response(self) -> axum::response::Response {
         (StatusCode::OK, Json(self)).into_response()
     }
 }
 
-impl From<Vec<DeliveryCustomerOut>> for ExpiredCustomerList {
+impl From<Vec<DeliveryCustomerOut>> for DeliveryCustomerList {
     fn from(value: Vec<DeliveryCustomerOut>) -> Self {
         Self(value)
     }

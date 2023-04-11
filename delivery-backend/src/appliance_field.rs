@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset};
 use mongodb::bson::Bson;
 
-use crate::customer::OperationPerformed;
+use crate::customer::{CustomerStatus, OperationPerformed};
 
 pub enum ApplianceField {
     String(String),
@@ -45,6 +45,12 @@ impl From<Option<String>> for ApplianceField {
 
 impl From<OperationPerformed> for ApplianceField {
     fn from(value: OperationPerformed) -> Self {
+        Self::String(value.to_string())
+    }
+}
+
+impl From<CustomerStatus> for ApplianceField {
+    fn from(value: CustomerStatus) -> Self {
         Self::String(value.to_string())
     }
 }

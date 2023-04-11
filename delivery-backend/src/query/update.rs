@@ -6,8 +6,8 @@ use mongodb::bson::{doc, Document};
 ///
 /// It's fields are analogous to a flattened [`DeliveryCustomer`],
 /// except that all fields are optional.
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct PartialDeliveryCustomerUpdate {
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct PartialDeliveryCustomer {
     pub customer_id: String,
     pub name: Option<String>,
     pub status: Option<CustomerStatus>,
@@ -18,7 +18,8 @@ pub struct PartialDeliveryCustomerUpdate {
     pub manufacturer: Option<String>,
     pub year_of_manufacture: Option<u16>,
     pub model: Option<String>,
-    pub r#type: Option<String>,
+    #[serde(rename = "type")]
+    pub typ: Option<String>,
     pub warranty: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub operation_performed: Option<OperationPerformed>,
     pub appliance_number: Option<String>,
@@ -27,67 +28,10 @@ pub struct PartialDeliveryCustomerUpdate {
     pub observations: Option<String>
 }
 
-impl IntoIterator for PartialDeliveryCustomerUpdate {
-    type Item = (String, Option<ApplianceField>);
-
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        // NOTE: `customer_id` is intentionally omitted
-        // because that's not optional
-        vec![
-            ("name".into(), self.name.map(ApplianceField::from)),
-            (
-                "status".into(),
-                self.status
-                    .map(|status| ApplianceField::from(status.to_string()))
-            ),
-            ("county".into(), self.county.map(ApplianceField::from)),
-            ("street".into(), self.street.map(ApplianceField::from)),
-            ("number".into(), self.number.map(ApplianceField::from)),
-            (
-                "additional".into(),
-                self.additional.map(ApplianceField::from)
-            ),
-            (
-                "manufacturer".into(),
-                self.manufacturer.map(ApplianceField::from)
-            ),
-            (
-                "year_of_manufacture".into(),
-                self.year_of_manufacture.map(ApplianceField::from)
-            ),
-            ("model".into(), self.model.map(ApplianceField::from)),
-            ("type".into(), self.r#type.map(ApplianceField::from)),
-            ("warranty".into(), self.warranty.map(ApplianceField::from)),
-            (
-                "operation_performed".into(),
-                self.operation_performed
-                    .map(|op_perf| ApplianceField::from(op_perf.to_string()))
-            ),
-            (
-                "appliance_number".into(),
-                self.appliance_number.map(ApplianceField::from)
-            ),
-            ("date".into(), self.date.map(ApplianceField::from)),
-            (
-                "expiration_date".into(),
-                self.expiration_date.map(ApplianceField::from)
-            ),
-            (
-                "observations".into(),
-                self.observations.map(ApplianceField::from)
-            ),
-        ]
-        .into_iter()
-    }
-}
-
-impl PartialDeliveryCustomerUpdate {
+impl PartialDeliveryCustomer {
     /// Converts a [`PartialDeliveryCustomer`] into a MongoDB [`Document`]
     ///
-    /// Filters out all fields that are `None`. If the filtering is not desired,
-    /// use [`into_document`].
+    /// Filters out all fields that are [`None`].
     pub fn into_update_document_no_none(self) -> Document {
         let all_some = self.into_iter().filter(|(_, value)| value.is_some());
         let mut inner_document = Document::default();
@@ -103,7 +47,7 @@ impl PartialDeliveryCustomerUpdate {
                 "manufacturer"
                 | "year_of_manufacture"
                 | "model"
-                | "type"
+                | "typ"
                 | "warranty"
                 | "operation_performed"
                 | "appliance_number"
@@ -120,16 +64,58 @@ impl PartialDeliveryCustomerUpdate {
 
         inner_document.insert("address", address_document);
         inner_document.insert("appliance", appliance_document);
-
         document.insert("$set", inner_document);
 
         document
     }
+}
 
-    /// Converts a [`PartialDeliveryCustomer`] into a MongoDB [`Document`]
-    ///
-    /// There's no filtering done.
-    pub fn into_update_document(self) -> Document {
-        unimplemented!()
+impl IntoIterator for PartialDeliveryCustomer {
+    type Item = (String, Option<ApplianceField>);
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        vec![
+            ("customer_id".into(), Some(self.customer_id.into())),
+            ("name".into(), self.name.map(ApplianceField::from)),
+            ("status".into(), self.status.map(ApplianceField::from)),
+            ("county".into(), self.county.map(ApplianceField::from)),
+            ("street".into(), self.street.map(ApplianceField::from)),
+            ("number".into(), self.number.map(ApplianceField::from)),
+            (
+                "additional".into(),
+                self.additional.map(ApplianceField::from)
+            ),
+            (
+                "manufacturer".into(),
+                self.manufacturer.map(ApplianceField::from)
+            ),
+            (
+                "year_of_manufacture".into(),
+                self.year_of_manufacture.map(ApplianceField::from)
+            ),
+            ("model".into(), self.model.map(ApplianceField::from)),
+            ("type".into(), self.typ.map(ApplianceField::from)),
+            ("warranty".into(), self.warranty.map(ApplianceField::from)),
+            (
+                "operation_performed".into(),
+                self.operation_performed.map(ApplianceField::from)
+            ),
+            (
+                "appliance_number".into(),
+                self.appliance_number.map(ApplianceField::from)
+            ),
+            ("date".into(), self.date.map(ApplianceField::from)),
+            (
+                "expiration_date".into(),
+                self.expiration_date.map(ApplianceField::from)
+            ),
+            (
+                "observations".into(),
+                self.observations.map(ApplianceField::from)
+            ),
+        ]
+        .into_iter()
     }
 }

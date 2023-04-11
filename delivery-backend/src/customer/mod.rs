@@ -9,5 +9,5 @@ pub use appliance::ApplianceIn;
 pub use delivery_customer::{
     CustomerStatus, DeliveryCustomerIn, DeliveryCustomerOut
 };
-pub use expired_customer::ExpiredCustomerList;
+pub use expired_customer::DeliveryCustomerList;
 pub use operation_performed::OperationPerformed;
