@@ -1,6 +1,6 @@
 use crate::customer::ExpiredCustomerList;
 use crate::query::ExpiredCustomersQuery;
-use crate::query::PartialDeliveryCustomer;
+use crate::query::PartialDeliveryCustomerUpdate;
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
 use crate::state::AppState;
 use crate::{customer::DeliveryCustomerIn, error::AppError};
@@ -27,7 +27,7 @@ async fn create_customer(
 #[axum_macros::debug_handler]
 async fn update_customer(
     State(state): State<AppState>,
-    Json(customer): Json<PartialDeliveryCustomer>
+    Json(customer): Json<PartialDeliveryCustomerUpdate>
 ) -> Result<UpdateResultResponse, AppError> {
     state.database().update_customer(customer).await
 }

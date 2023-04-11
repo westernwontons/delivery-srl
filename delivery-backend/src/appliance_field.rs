@@ -1,14 +1,17 @@
+use chrono::{DateTime, FixedOffset};
 use mongodb::bson::Bson;
+
+use crate::customer::OperationPerformed;
 
 pub enum ApplianceField {
     String(String),
-    DateTime(chrono::DateTime<chrono::FixedOffset>),
-    Number(u16)
+    DateTime(DateTime<FixedOffset>),
+    Number(i32)
 }
 
 impl From<u16> for ApplianceField {
     fn from(value: u16) -> Self {
-        Self::Number(value)
+        Self::Number(value as i32)
     }
 }
 
@@ -18,8 +21,8 @@ impl From<String> for ApplianceField {
     }
 }
 
-impl From<chrono::DateTime<chrono::FixedOffset>> for ApplianceField {
-    fn from(value: chrono::DateTime<chrono::FixedOffset>) -> Self {
+impl From<DateTime<FixedOffset>> for ApplianceField {
+    fn from(value: DateTime<FixedOffset>) -> Self {
         Self::DateTime(value)
     }
 }
@@ -29,7 +32,19 @@ impl From<ApplianceField> for Bson {
         match value {
             ApplianceField::String(s) => Bson::String(s),
             ApplianceField::DateTime(d) => Bson::DateTime(d.into()),
-            ApplianceField::Number(n) => Bson::Int32(n as i32)
+            ApplianceField::Number(n) => Bson::Int32(n)
         }
+    }
+}
+
+impl From<Option<String>> for ApplianceField {
+    fn from(value: Option<String>) -> Self {
+        Self::String(value.unwrap_or_default())
+    }
+}
+
+impl From<OperationPerformed> for ApplianceField {
+    fn from(value: OperationPerformed) -> Self {
+        Self::String(value.to_string())
     }
 }

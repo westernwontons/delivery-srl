@@ -1,4 +1,5 @@
-use mongodb::bson::{self, Bson, Document};
+use chrono::{DateTime, Utc};
+use mongodb::bson::{self, Document};
 use serde::{Deserialize, Deserializer};
 
 use crate::appliance_field::ApplianceField;
@@ -15,30 +16,21 @@ pub struct ApplianceIn {
     pub manufacturer: String,
     pub year_of_manufacture: String,
     pub model: String,
-    pub r#type: String,
-    pub warranty: chrono::DateTime<chrono::FixedOffset>,
+    #[serde(rename = "type")]
+    pub typ: String,
+    pub warranty: DateTime<chrono::FixedOffset>,
     pub operation_performed: OperationPerformed,
     pub number: String,
-    pub date: chrono::DateTime<chrono::FixedOffset>,
-    pub expiration_date: chrono::DateTime<chrono::FixedOffset>,
+    pub date: DateTime<chrono::FixedOffset>,
+    pub expiration_date: DateTime<chrono::FixedOffset>,
     pub observations: Option<String>
 }
 
 impl ApplianceIn {
     /// Convert [`Self`] into a MongoDB [`Document`]
     pub fn into_document(self) -> Document {
-        let convert = |key: String, value: ApplianceField| {
-            (
-                key,
-                match value {
-                    ApplianceField::String(string) => Bson::String(string),
-                    ApplianceField::DateTime(dt) => Bson::DateTime(dt.into()),
-                    _ => unimplemented!()
-                }
-            )
-        };
         Document::from_iter(
-            self.into_iter().map(|(key, value)| convert(key, value))
+            self.into_iter().map(|(key, value)| (key, value.into()))
         )
     }
 }
@@ -56,19 +48,16 @@ impl IntoIterator for ApplianceIn {
                 self.year_of_manufacture.into()
             ),
             ("model".into(), self.model.into()),
-            ("type".into(), self.r#type.into()),
+            ("type".into(), self.typ.into()),
             ("warranty".into(), self.warranty.into()),
             (
                 "operation_performed".into(),
-                self.operation_performed.to_string().into()
+                self.operation_performed.into()
             ),
             ("number".into(), self.number.into()),
             ("date".into(), self.date.into()),
             ("expiration_date".into(), self.expiration_date.into()),
-            (
-                "observations".into(),
-                self.observations.unwrap_or_default().into()
-            ),
+            ("observations".into(), self.observations.into()),
         ]
         .into_iter()
     }
@@ -84,22 +73,23 @@ pub struct ApplianceOut {
     pub manufacturer: String,
     pub year_of_manufacture: String,
     pub model: String,
-    pub r#type: String,
+    #[serde(rename = "type")]
+    pub typ: String,
     #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
-    pub warranty: chrono::DateTime<chrono::Utc>,
+    pub warranty: DateTime<Utc>,
     pub operation_performed: OperationPerformed,
     pub number: String,
     #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
-    pub date: chrono::DateTime<chrono::Utc>,
+    pub date: DateTime<Utc>,
     #[serde(deserialize_with = "deserialize_chrono_from_bson_datetime")]
-    pub expiration_date: chrono::DateTime<chrono::Utc>,
+    pub expiration_date: DateTime<Utc>,
     pub observations: Option<String>
 }
 
 /// Deserializes a [`chrono::DateTime`] from a [`mongodb::bson::DateTime`].
 pub fn deserialize_chrono_from_bson_datetime<'de, D>(
     deserializer: D
-) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
+) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>
 {

@@ -7,7 +7,7 @@ use mongodb::bson::{doc, Document};
 /// It's fields are analogous to a flattened [`DeliveryCustomer`],
 /// except that all fields are optional.
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct PartialDeliveryCustomer {
+pub struct PartialDeliveryCustomerUpdate {
     pub customer_id: String,
     pub name: Option<String>,
     pub status: Option<CustomerStatus>,
@@ -27,13 +27,14 @@ pub struct PartialDeliveryCustomer {
     pub observations: Option<String>
 }
 
-impl IntoIterator for PartialDeliveryCustomer {
+impl IntoIterator for PartialDeliveryCustomerUpdate {
     type Item = (String, Option<ApplianceField>);
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         // NOTE: `customer_id` is intentionally omitted
+        // because that's not optional
         vec![
             ("name".into(), self.name.map(ApplianceField::from)),
             (
@@ -82,7 +83,7 @@ impl IntoIterator for PartialDeliveryCustomer {
     }
 }
 
-impl PartialDeliveryCustomer {
+impl PartialDeliveryCustomerUpdate {
     /// Converts a [`PartialDeliveryCustomer`] into a MongoDB [`Document`]
     ///
     /// Filters out all fields that are `None`. If the filtering is not desired,

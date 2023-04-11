@@ -2,7 +2,9 @@ use crate::customer::{DeliveryCustomerIn, ExpiredCustomerList};
 use crate::error::AppError;
 use crate::query::ExpiredCustomersQuery;
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
-use crate::{customer::DeliveryCustomerOut, query::PartialDeliveryCustomer};
+use crate::{
+    customer::DeliveryCustomerOut, query::PartialDeliveryCustomerUpdate
+};
 
 use mongodb::bson::{self, doc};
 use mongodb::options::ClientOptions;
@@ -55,7 +57,7 @@ impl Database {
     /// Update a [`DeliveryCustomer`] in the database
     pub async fn update_customer(
         &self,
-        customer: PartialDeliveryCustomer
+        customer: PartialDeliveryCustomerUpdate
     ) -> Result<UpdateResultResponse, AppError> {
         Ok(self
             .customer_collection()
