@@ -3,7 +3,8 @@ use axum::Router;
 use delivery_backend::error::AppError;
 use delivery_backend::routes;
 use delivery_backend::state::{setup_app_state, AppState};
-use std::net::SocketAddr;
+use std::env;
+use std::net::{IpAddr, SocketAddr};
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
 
@@ -13,8 +14,24 @@ use tower_http::trace::TraceLayer;
 /// which is going to become the one router to rule them all.
 #[tracing::instrument(skip(app))]
 async fn run_app(app: Router) -> anyhow::Result<()> {
+    let host = match env::var("AXUM_HOST") {
+        Ok(v) => v,
+        Err(_) => {
+            tracing::info!("AXUM_HOST not specified, using default");
+            "0.0.0.0".into()
+        }
+    };
+
+    let port = match env::var("AXUM_PORT") {
+        Ok(v) => v.parse::<u16>()?,
+        Err(_) => {
+            tracing::info!("AXUM_PORT not specified, using default");
+            3000
+        }
+    };
+
     tracing::info!("Binding app to 0.0.0.0:3000");
-    axum::Server::bind(&"0.0.0.0:3000".parse::<SocketAddr>()?)
+    axum::Server::bind(&SocketAddr::new(host.parse::<IpAddr>()?, port))
         .serve(app.into_make_service())
         .await?;
 
