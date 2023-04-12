@@ -1,15 +1,15 @@
-use crate::customer::DeliveryCustomerOut;
 use crate::customer::{DeliveryCustomerIn, DeliveryCustomerList};
 use crate::error::AppError;
 use crate::query::{ExpiredCustomersQuery, PartialDeliveryCustomer};
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
 
-use mongodb::bson::doc;
+use mongodb::bson::{doc, Document};
+use mongodb::error::Error as MongoError;
 use mongodb::options::ClientOptions;
 use mongodb::options::UpdateOptions;
-use mongodb::Client as MongoClient;
 use mongodb::Collection as MongoCollection;
 use mongodb::Database as MongoDatabase;
+use mongodb::{Client as MongoClient, Cursor};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
@@ -82,7 +82,7 @@ impl Database {
         &self,
         customer_id: String
     ) -> Result<UpdateResultResponse, AppError> {
-        Ok(self
+        let update_result_response = self
             .customer_collection()
             .update_one(
                 doc! {
@@ -96,7 +96,9 @@ impl Database {
                 None
             )
             .await?
-            .into())
+            .into();
+
+        Ok(update_result_response)
     }
 
     /// Deactivate a [`DeliveryCustomer`]
@@ -105,7 +107,7 @@ impl Database {
         &self,
         customer_id: String
     ) -> Result<UpdateResultResponse, AppError> {
-        Ok(self
+        let update_result_response = self
             .customer_collection()
             .update_one(
                 doc! {
@@ -119,7 +121,9 @@ impl Database {
                 None
             )
             .await?
-            .into())
+            .into();
+
+        Ok(update_result_response)
     }
 
     /// Delete a [`DeliveryCustomer`]
@@ -128,11 +132,13 @@ impl Database {
         &self,
         customer_id: String
     ) -> Result<DeleteResultResponse, AppError> {
-        Ok(self
+        let delete_result_response = self
             .customer_collection()
             .delete_one(doc! {"customer_id": customer_id}, None)
             .await?
-            .into())
+            .into();
+
+        Ok(delete_result_response)
     }
 
     /// Fetch expired customers
@@ -143,18 +149,12 @@ impl Database {
         &self,
         time_range: ExpiredCustomersQuery
     ) -> Result<DeliveryCustomerList, AppError> {
-        let mut cursor = self
+        let cursor = self
             .customer_collection()
             .aggregate(time_range.as_aggregation(), None)
             .await?;
 
-        let mut buffer = Vec::<DeliveryCustomerOut>::with_capacity(10);
-
-        while cursor.advance().await? {
-            buffer.push(cursor.deserialize_current().try_into()?)
-        }
-
-        Ok(buffer.into())
+        try_customer_list(cursor).await
     }
 
     /// Use `MongoDB` full-text search
@@ -165,9 +165,15 @@ impl Database {
     #[tracing::instrument(skip(self))]
     pub async fn search_customers(
         &self,
-        _query: String
+        query: String
     ) -> Result<DeliveryCustomerList, AppError> {
-        todo!()
+        let cursor = self
+            .customer_collection()
+            .clone_with_type::<Document>()
+            .find(doc! {}, None)
+            .await?;
+
+        try_customer_list(cursor).await
     }
 }
 
@@ -185,8 +191,9 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     match env::var("MONGO_TIMEOUT_DURATION") {
         Ok(duration) => {
             match u64::from_str_radix(&duration, 10) {
-                Ok(number) => {
-                    options.connect_timeout = Some(Duration::from_secs(number));
+                Ok(parsed_duration) => {
+                    options.connect_timeout =
+                        Some(Duration::from_secs(parsed_duration));
                 }
                 Err(error) => {
                     tracing::info!("Failed to parse MONGO_TIMEOUT_DURATION={duration} into integer: {error}. Using default");
@@ -211,4 +218,29 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
 
     let mongodb_client = MongoClient::with_options(options)?;
     Ok(Arc::new(Database::new(mongodb_client)))
+}
+
+/// Builds a list of customers by driving the [`Cursor`] forward
+///
+/// `I` is the type that goes into the buffer.
+///
+/// `R` is the return value. `R` must implement `From<Vec<I>>`
+///
+/// `E` is the error type here, it must implement `From<MongoError>`
+pub async fn try_customer_list<I, R, E>(
+    mut cursor: Cursor<Document>
+) -> Result<R, E>
+where
+    Vec<I>: Into<R>,
+    Result<Document, MongoError>: TryInto<I, Error = E>,
+    MongoError: Into<E>
+{
+    let mut buffer = Vec::with_capacity(10);
+
+    while cursor.advance().await.map_err(Into::into)? {
+        let deserialized = cursor.deserialize_current().try_into()?;
+        buffer.push(deserialized)
+    }
+
+    Ok(buffer.into())
 }
