@@ -15,10 +15,10 @@ use tower_http::trace::TraceLayer;
 #[tracing::instrument(skip(app))]
 async fn run_app(app: Router) -> anyhow::Result<()> {
     let host = match env::var("AXUM_HOST") {
-        Ok(v) => v,
+        Ok(v) => v.parse::<IpAddr>()?,
         Err(_) => {
             tracing::info!("AXUM_HOST not specified, using default");
-            "0.0.0.0".into()
+            "0.0.0.0".parse::<IpAddr>().unwrap()
         }
     };
 
@@ -31,7 +31,7 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
     };
 
     tracing::info!("Binding app to 0.0.0.0:3000");
-    axum::Server::bind(&SocketAddr::new(host.parse::<IpAddr>()?, port))
+    axum::Server::bind(&SocketAddr::new(host, port))
         .serve(app.into_make_service())
         .await?;
 
