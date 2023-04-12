@@ -1,15 +1,18 @@
 use crate::customer::{DeliveryCustomerIn, DeliveryCustomerList};
 use crate::error::AppError;
-use crate::query::{ExpiredCustomersQuery, PartialDeliveryCustomer};
+use crate::query::{
+    ExpiredCustomersQuery, PartialDeliveryCustomer, SearchQuery
+};
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
 
 use mongodb::bson::{doc, Document};
 use mongodb::error::Error as MongoError;
 use mongodb::options::ClientOptions;
+use mongodb::options::FindOptions;
 use mongodb::options::UpdateOptions;
-use mongodb::Collection as MongoCollection;
 use mongodb::Database as MongoDatabase;
 use mongodb::{Client as MongoClient, Cursor};
+use mongodb::{Collection as MongoCollection, IndexModel};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,7 +35,7 @@ impl Database {
 
     /// Returns the `customer` collection from `MongoDB`.
     #[tracing::instrument(skip(self))]
-    fn customer_collection(&self) -> MongoCollection<DeliveryCustomerIn> {
+    fn customer_collection(&self) -> MongoCollection<Document> {
         self.get_database().collection("customer")
     }
 
@@ -47,9 +50,7 @@ impl Database {
         Ok(self
             .customer_collection()
             .update_one(
-                doc! {
-                    "customer_id": &customer.customer_id
-                },
+                doc! { "customer_id": &customer.customer_id },
                 customer.into_update_document(),
                 UpdateOptions::builder().upsert(Some(true)).build()
             )
@@ -66,9 +67,7 @@ impl Database {
         Ok(self
             .customer_collection()
             .update_one(
-                doc! {
-                    "customer_id": &customer.customer_id
-                },
+                doc! { "customer_id": &customer.customer_id },
                 customer.into_update_document_no_none(),
                 None
             )
@@ -85,14 +84,8 @@ impl Database {
         let update_result_response = self
             .customer_collection()
             .update_one(
-                doc! {
-                    "customer_id": customer_id
-                },
-                doc! {
-                    "$set": {
-                        "active": true
-                    }
-                },
+                doc! { "customer_id": customer_id },
+                doc! { "$set": { "active": true } },
                 None
             )
             .await?
@@ -110,14 +103,8 @@ impl Database {
         let update_result_response = self
             .customer_collection()
             .update_one(
-                doc! {
-                    "customer_id": customer_id
-                },
-                doc! {
-                    "$set": {
-                        "active": false
-                    }
-                },
+                doc! { "customer_id": customer_id },
+                doc! { "$set": { "active": false } },
                 None
             )
             .await?
@@ -165,12 +152,16 @@ impl Database {
     #[tracing::instrument(skip(self))]
     pub async fn search_customers(
         &self,
-        query: String
+        search: SearchQuery
     ) -> Result<DeliveryCustomerList, AppError> {
         let cursor = self
             .customer_collection()
-            .clone_with_type::<Document>()
-            .find(doc! {}, None)
+            .find(
+                doc! { "$text": { "$search": search.query } },
+                FindOptions::builder()
+                    .sort(doc! { "score": { "$meta": "textScore" } })
+                    .build()
+            )
             .await?;
 
         try_customer_list(cursor).await
@@ -217,12 +208,27 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     tracing::info!("MongoDB connection type: {:?}", options.direct_connection);
 
     let mongodb_client = MongoClient::with_options(options)?;
+
+    tracing::info!("Setting up indexes");
+
+    mongodb_client
+        .database("delivery_database")
+        .collection::<Document>("customer")
+        .create_index(
+            IndexModel::builder().keys(doc! { "$**": "text" }).build(),
+            None
+        )
+        .await?;
+
+    tracing::info!("Index setup complete");
+
     Ok(Arc::new(Database::new(mongodb_client)))
 }
 
 /// Builds a list of customers by driving the [`Cursor`] forward
 ///
 /// `I` is the type that goes into the buffer.
+/// Must implement [`Serialize`] and [`Deserialize`]
 ///
 /// `R` is the return value. `R` must implement `From<Vec<I>>`
 ///
