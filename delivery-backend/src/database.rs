@@ -184,19 +184,23 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     let mongo_timeout_duration_default = 3;
     match env::var("MONGO_TIMEOUT_DURATION") {
         Ok(duration) => {
-            let mongo_timeout_duration = u64::from_str_radix(&duration, 10)
-                .unwrap_or(mongo_timeout_duration_default);
-
-            options.connect_timeout =
-                Some(Duration::from_secs(mongo_timeout_duration));
-
-            tracing::info!(
-                "MongoDB timeout duration: {}",
-                mongo_timeout_duration
-            );
+            match u64::from_str_radix(&duration, 10) {
+                Ok(number) => {
+                    options.connect_timeout = Some(Duration::from_secs(number));
+                }
+                Err(error) => {
+                    tracing::info!("Failed to parse MONGO_TIMEOUT_DURATION={duration} into integer: {error}. Using default");
+                    options.connect_timeout = Some(Duration::from_secs(
+                        mongo_timeout_duration_default
+                    ));
+                }
+            };
         }
 
         Err(_) => {
+            options.connect_timeout =
+                Some(Duration::from_secs(mongo_timeout_duration_default));
+
             tracing::info!("MONGO_TIMEOUT_DURATION not set, using default");
         }
     };
