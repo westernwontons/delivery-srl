@@ -6,6 +6,12 @@ use super::delivery_customer::DeliveryCustomerOut;
 #[serde(transparent)]
 pub struct DeliveryCustomerList(Vec<DeliveryCustomerOut>);
 
+impl DeliveryCustomerList {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
 impl IntoResponse for DeliveryCustomerList {
     fn into_response(self) -> axum::response::Response {
         (StatusCode::OK, Json(self)).into_response()

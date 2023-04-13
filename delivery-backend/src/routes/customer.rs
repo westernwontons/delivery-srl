@@ -1,6 +1,7 @@
 use crate::customer::DeliveryCustomerList;
 use crate::query::ExpiredCustomersQuery;
 use crate::query::PartialDeliveryCustomer;
+use crate::responses::InsertOneResultResponse;
 use crate::responses::{DeleteResultResponse, UpdateResultResponse};
 use crate::state::AppState;
 use crate::{customer::DeliveryCustomerIn, error::AppError};
@@ -13,22 +14,34 @@ use axum::{Json, Router};
 /// Add a new [`DeliveryCustomer`]
 ///
 /// Adds a new [`DeliveryCustomer`] to the database.
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn create_customer(
     State(state): State<AppState>,
     Json(customer): Json<DeliveryCustomerIn>
-) -> Result<UpdateResultResponse, AppError> {
-    state.database().upsert_customer(customer).await
+) -> Result<InsertOneResultResponse, AppError> {
+    tracing::info!(
+        "Inserting customer with customer_id={}",
+        &customer.customer_id
+    );
+
+    state.database().insert_customer(customer).await
 }
 
 /// Edit a [`DeliveryCustomer`]
 ///
 /// Edits an existing [`DeliveryCustomer`] in the database.
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn update_customer(
     State(state): State<AppState>,
     Json(customer): Json<PartialDeliveryCustomer>
 ) -> Result<UpdateResultResponse, AppError> {
+    tracing::info!(
+        "Updating customer with customer_id={}",
+        &customer.customer_id
+    );
+
     state.database().update_customer(customer).await
 }
 
@@ -38,11 +51,14 @@ async fn update_customer(
 /// or for some other arbitrary reason.
 /// It's a requirement to keep the data associated with them,
 /// whether they're still an active customer or not.
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn activate_customer(
     State(state): State<AppState>,
     Path(customer_id): Path<String>
 ) -> Result<UpdateResultResponse, AppError> {
+    tracing::info!("Activating customer with customer_id={}", &customer_id);
+
     state.database().activate_customer(customer_id).await
 }
 
@@ -52,30 +68,42 @@ async fn activate_customer(
 /// or for some other arbitrary reason.
 /// It's a requirement to keep the data associated with them,
 /// whether they're still an active customer or not.
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn deactivate_customer(
     State(state): State<AppState>,
     Path(customer_id): Path<String>
 ) -> Result<UpdateResultResponse, AppError> {
+    tracing::info!("Deactivating customer with customer_id={}", &customer_id);
+
     state.database().deactivate_customer(customer_id).await
 }
 
+/// Delete a [`DeliveryCustomer`]
+///
+/// Removes a [`DeliveryCustomer`] with matching `customer_id` from MongoDb
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn delete_customer(
     State(state): State<AppState>,
     Path(customer_id): Path<String>
 ) -> Result<DeleteResultResponse, AppError> {
+    tracing::info!("Deleting customer with customer_id={}", &customer_id);
+
     state.database().delete_customer(customer_id).await
 }
 
 /// Retrieve expired [`DeliveryCustomer`]s
 ///
 /// Retrieve [`DeliveryCustomer`]s that are expired (their appliance is due for a checkup).
+#[tracing::instrument(skip(state))]
 #[axum_macros::debug_handler]
 async fn expired_customers(
     State(state): State<AppState>,
     Query(query): Query<ExpiredCustomersQuery>
 ) -> Result<DeliveryCustomerList, AppError> {
+    tracing::info!("Retrieving expired customers");
+
     state.database().expired_customers(query).await
 }
 

@@ -4,6 +4,7 @@ use mongodb::bson::oid::ObjectId;
 use mongodb::results::DeleteResult;
 use mongodb::results::{InsertOneResult, UpdateResult};
 
+/// The result of inserting a single document to MongoDb
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct InsertOneResultResponse {
     inserted_id: ObjectId
@@ -27,6 +28,9 @@ impl From<InsertOneResult> for InsertOneResultResponse {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
+/// The result of updating a single document in MongoDb
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UpdateResultResponse {
     matched_count: u64,
@@ -58,6 +62,9 @@ impl From<UpdateResult> for UpdateResultResponse {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
+/// The result of deleting a single document in MongoDb
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct DeleteResultResponse {
     deleted_count: u64

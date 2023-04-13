@@ -1,15 +1,16 @@
-use crate::customer::{DeliveryCustomerIn, DeliveryCustomerList};
+use crate::customer::DeliveryCustomerIn;
+use crate::customer::DeliveryCustomerList;
 use crate::error::AppError;
-use crate::query::{
-    ExpiredCustomersQuery, PartialDeliveryCustomer, SearchQuery
-};
-use crate::responses::{DeleteResultResponse, UpdateResultResponse};
-
+use crate::query::ExpiredCustomersQuery;
+use crate::query::PartialDeliveryCustomer;
+use crate::query::SearchQuery;
+use crate::responses::DeleteResultResponse;
+use crate::responses::InsertOneResultResponse;
+use crate::responses::UpdateResultResponse;
 use mongodb::bson::{doc, Document};
 use mongodb::error::Error as MongoError;
 use mongodb::options::ClientOptions;
 use mongodb::options::FindOptions;
-use mongodb::options::UpdateOptions;
 use mongodb::Database as MongoDatabase;
 use mongodb::{Client as MongoClient, Cursor};
 use mongodb::{Collection as MongoCollection, IndexModel};
@@ -17,6 +18,9 @@ use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Represents the connection to the database
+///
+/// Uses a [`MongoClient`] internally
 pub struct Database {
     client: MongoClient
 }
@@ -41,30 +45,31 @@ impl Database {
 
     /// Commit a [`DeliveryCustomerIn`] to the database
     ///
-    /// If the customer already exists, update that customer with the new fields.
+    /// Note that there will be no checks made whether the customer already exists.
+    /// The [`DeliveryCustomerIn`] will be inserted as is.
     #[tracing::instrument(skip(self))]
-    pub async fn upsert_customer(
+    pub async fn insert_customer(
         &self,
         customer: DeliveryCustomerIn
-    ) -> Result<UpdateResultResponse, AppError> {
+    ) -> Result<InsertOneResultResponse, AppError> {
         Ok(self
             .customer_collection()
-            .update_one(
-                doc! { "customer_id": &customer.customer_id },
-                customer.into_update_document(),
-                UpdateOptions::builder().upsert(Some(true)).build()
-            )
+            .insert_one(customer.into_update_document(), None)
             .await?
             .into())
     }
 
     /// Update a [`DeliveryCustomer`] in the database
+    ///
+    /// Updates a document in the `customer` collection, based on a matching `customer_id`.
+    /// The [`PartialDeliveryCustomer`] is purged of all [`None`] fields, because we don't want
+    /// to overwrite any of the existing values.
     #[tracing::instrument(skip(self))]
     pub async fn update_customer(
         &self,
         customer: PartialDeliveryCustomer
     ) -> Result<UpdateResultResponse, AppError> {
-        Ok(self
+        let update_result_response = self
             .customer_collection()
             .update_one(
                 doc! { "customer_id": &customer.customer_id },
@@ -72,7 +77,8 @@ impl Database {
                 None
             )
             .await?
-            .into())
+            .into();
+        Ok(update_result_response)
     }
 
     /// Activate a [`DeliveryCustomer`]
@@ -141,7 +147,22 @@ impl Database {
             .aggregate(time_range.as_aggregation(), None)
             .await?;
 
-        try_customer_list(cursor).await
+        let customer_list =
+            try_customer_list::<DeliveryCustomerList, _, _>(cursor).await;
+
+        match customer_list {
+            Ok(customer_list) => {
+                tracing::info!(
+                    "Found {} expired customers",
+                    &customer_list.len()
+                );
+                Ok(customer_list)
+            }
+            Err(err) => {
+                tracing::error!("{err}");
+                Err(err)
+            }
+        }
     }
 
     /// Use `MongoDB` full-text search
@@ -157,14 +178,30 @@ impl Database {
         let cursor = self
             .customer_collection()
             .find(
-                doc! { "$text": { "$search": search.query } },
+                doc! { "$text": { "$search": &search.query } },
                 FindOptions::builder()
                     .sort(doc! { "score": { "$meta": "textScore" } })
                     .build()
             )
             .await?;
 
-        try_customer_list(cursor).await
+        let customer_list =
+            try_customer_list::<DeliveryCustomerList, _, _>(cursor).await;
+
+        match customer_list {
+            Ok(customer_list) => {
+                tracing::info!(
+                    "Found {} customers. Query used: {}",
+                    customer_list.len(),
+                    &search
+                );
+                Ok(customer_list)
+            }
+            Err(err) => {
+                tracing::error!("{err}");
+                Err(err)
+            }
+        }
     }
 }
 
@@ -173,6 +210,7 @@ impl Database {
 pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     let mongo_url = env::var("MONGO_URL").unwrap_or_else(|_| {
         tracing::info!("MONGO_URL not set, using default");
+
         "mongodb://127.0.0.1:27017".into()
     });
 
@@ -181,7 +219,7 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     let mongo_timeout_duration_default = 3;
     match env::var("MONGO_TIMEOUT_DURATION") {
         Ok(duration) => {
-            match u64::from_str_radix(&duration, 10) {
+            match duration.parse::<u64>() {
                 Ok(parsed_duration) => {
                     options.connect_timeout =
                         Some(Duration::from_secs(parsed_duration));
@@ -233,7 +271,7 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
 /// `R` is the return value. `R` must implement `From<Vec<I>>`
 ///
 /// `E` is the error type here, it must implement `From<MongoError>`
-pub async fn try_customer_list<I, R, E>(
+pub async fn try_customer_list<R, I, E>(
     mut cursor: Cursor<Document>
 ) -> Result<R, E>
 where
