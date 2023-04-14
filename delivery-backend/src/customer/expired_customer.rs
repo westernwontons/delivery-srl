@@ -7,6 +7,7 @@ use super::delivery_customer::DeliveryCustomerOut;
 pub struct DeliveryCustomerList(Vec<DeliveryCustomerOut>);
 
 impl DeliveryCustomerList {
+    /// Return the number of [`DeliveryCustomerOut`]s held
     pub fn len(&self) -> usize {
         self.0.len()
     }
