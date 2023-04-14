@@ -29,9 +29,7 @@ pub struct ApplianceIn {
 impl ApplianceIn {
     /// Convert [`Self`] into a MongoDB [`Document`]
     pub fn into_document(self) -> Document {
-        Document::from_iter(
-            self.into_iter().map(|(key, value)| (key, value.into()))
-        )
+        Document::from_iter(self.into_iter().map(|(key, value)| (key, value.into())))
     }
 }
 

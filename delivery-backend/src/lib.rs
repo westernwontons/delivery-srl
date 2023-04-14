@@ -4,5 +4,6 @@ pub mod database;
 pub mod error;
 pub mod query;
 pub mod responses;
-pub mod routes;
+pub mod routers;
 pub mod state;
+pub mod user;

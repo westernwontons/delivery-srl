@@ -11,12 +11,7 @@ pub struct Address {
 
 impl Address {
     /// Creates a new [`Address`].
-    pub fn new(
-        county: String,
-        street: String,
-        number: String,
-        additional: String
-    ) -> Self {
+    pub fn new(county: String, street: String, number: String, additional: String) -> Self {
         Self {
             county,
             street,
@@ -27,9 +22,7 @@ impl Address {
 
     /// Convert [`Self`] into a [`Document`]
     pub fn into_document(self) -> Document {
-        Document::from_iter(
-            self.into_iter().map(|(key, value)| (key, bson!(value)))
-        )
+        Document::from_iter(self.into_iter().map(|(key, value)| (key, bson!(value))))
     }
 }
 

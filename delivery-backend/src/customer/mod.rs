@@ -6,8 +6,6 @@ mod operation_performed;
 
 pub use address::Address;
 pub use appliance::ApplianceIn;
-pub use delivery_customer::{
-    CustomerStatus, DeliveryCustomerIn, DeliveryCustomerOut
-};
+pub use delivery_customer::{CustomerStatus, DeliveryCustomerIn, DeliveryCustomerOut};
 pub use expired_customer::DeliveryCustomerList;
 pub use operation_performed::OperationPerformed;

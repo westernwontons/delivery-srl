@@ -1,7 +1,4 @@
-use crate::{
-    customer::DeliveryCustomerList, error::AppError, query::SearchQuery,
-    state::AppState
-};
+use crate::{customer::DeliveryCustomerList, error::AppError, query::SearchQuery, state::AppState};
 use axum::extract::{Query, State};
 
 /// Search for a `DeliveryCustomer` in the database.

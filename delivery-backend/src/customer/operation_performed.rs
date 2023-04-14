@@ -33,10 +33,7 @@ impl std::str::FromStr for OperationPerformed {
             "PIF" => Ok(Self::PIF),
             "RGAZ" => Ok(Self::RGAZ),
             "VGAZ" => Ok(Self::VGAZ),
-            _ => anyhow::bail!(format!(
-                "Cannot parse {} into OperationPerformed",
-                s
-            ))
+            _ => anyhow::bail!(format!("Cannot parse {} into OperationPerformed", s))
         }
     }
 }
@@ -51,10 +48,7 @@ impl TryFrom<String> for OperationPerformed {
             "PIF" => Ok(Self::PIF),
             "RGAZ" => Ok(Self::RGAZ),
             "VGAZ" => Ok(Self::VGAZ),
-            _ => anyhow::bail!(format!(
-                "Cannot parse {} into OperationPerformed",
-                value
-            ))
+            _ => anyhow::bail!(format!("Cannot parse {} into OperationPerformed", value))
         }
     }
 }

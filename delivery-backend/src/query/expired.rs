@@ -27,13 +27,13 @@ impl ExpiredCustomersQuery {
             .last_seen
             .map(|oid| doc! {"$match": {"_id": {"$gt": oid}}});
 
-        if let (None, None) = (self.start_date.as_ref(), self.end_date.as_ref())
-        {
-            let now_minus_one_year =
-                chrono::Local::now().sub(chrono::Duration::days(365));
+        if let (None, None) = (self.start_date.as_ref(), self.end_date.as_ref()) {
+            let now_minus_one_year = chrono::Local::now().sub(chrono::Duration::days(365));
 
-            aggregation
-            .insert("$match", doc! { "appliance.expiration_date": { "$gt": now_minus_one_year } });
+            aggregation.insert(
+                "$match",
+                doc! { "appliance.expiration_date": { "$gt": now_minus_one_year } }
+            );
 
             if let Some(document) = return_from {
                 return vec![document, aggregation, limit];
@@ -51,8 +51,7 @@ impl ExpiredCustomersQuery {
             inner_doc.insert("$lt", end_date);
         }
 
-        aggregation
-            .insert("$match", doc! { "appliance.expiration_date": inner_doc });
+        aggregation.insert("$match", doc! { "appliance.expiration_date": inner_doc });
 
         if let Some(document) = return_from {
             return vec![document, aggregation, limit];

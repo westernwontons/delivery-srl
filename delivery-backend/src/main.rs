@@ -1,11 +1,16 @@
+use axum::http::header::AUTHORIZATION;
+use axum::http::HeaderName;
 use axum::routing::{get, post};
 use axum::Router;
 use delivery_backend::error::AppError;
-use delivery_backend::routes;
+use delivery_backend::routers;
 use delivery_backend::state::{setup_app_state, AppState};
 use std::env;
 use std::net::{IpAddr, SocketAddr};
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
+use tower_http::propagate_header::PropagateHeaderLayer;
+use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::trace::TraceLayer;
 
 /// Run the app
@@ -43,17 +48,28 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
 /// Initializes the root router, middlewares and the app state
 #[tracing::instrument]
 async fn setup_app() -> Result<Router, AppError> {
-    let middleware_stack =
-        ServiceBuilder::new().layer(TraceLayer::new_for_http());
+    let middleware_stack = ServiceBuilder::new()
+        .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(
+            AUTHORIZATION
+        )))
+        .layer(TraceLayer::new_for_http())
+        .layer(CompressionLayer::new())
+        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
+            "x-request-id"
+        )));
+
     let app_state = setup_app_state().await?;
     tracing::info!("Application setup ok");
 
-    Ok(Router::<AppState>::new()
-        .route("/search", post(routes::customer_search))
-        .route("/history", get(routes::customer_history))
-        .nest("/customer", routes::customer_router())
+    let router = Router::<AppState>::new()
+        .route("/search", post(routers::customer_search))
+        .route("/history", get(routers::customer_history))
+        .nest("/customer", routers::customer_router())
+        .nest("/auth", routers::auth_router())
         .route_layer(middleware_stack)
-        .with_state(app_state))
+        .with_state(app_state);
+
+    Ok(router)
 }
 
 #[tokio::main]

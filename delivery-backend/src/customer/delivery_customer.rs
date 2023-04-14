@@ -30,10 +30,7 @@ impl std::str::FromStr for CustomerStatus {
         match s.to_lowercase().as_str() {
             "active" => Ok(Self::Active),
             "inactive" => Ok(Self::Inactive),
-            _ => anyhow::bail!(format!(
-                "Cannot create CustomerStatus from {}",
-                s
-            ))
+            _ => anyhow::bail!(format!("Cannot create CustomerStatus from {}", s))
         }
     }
 }
@@ -107,10 +104,7 @@ impl DeliveryCustomerIn {
 /// because serialized BSON is ugly.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct DeliveryCustomerOut {
-    #[serde(
-        serialize_with = "serialize_object_id_as_hex_string",
-        rename = "_id"
-    )]
+    #[serde(serialize_with = "serialize_object_id_as_hex_string", rename = "_id")]
     pub id: ObjectId,
     pub customer_id: String,
     pub name: String,
@@ -130,9 +124,7 @@ impl TryFrom<Document> for DeliveryCustomerOut {
 impl TryFrom<Result<Document, MongoError>> for DeliveryCustomerOut {
     type Error = AppError;
 
-    fn try_from(
-        value: Result<Document, MongoError>
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: Result<Document, MongoError>) -> Result<Self, Self::Error> {
         match value {
             Ok(d) => bson::from_document(d).map_err(AppError::from),
             Err(e) => Err(e.into())
