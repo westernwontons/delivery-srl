@@ -8,7 +8,6 @@ use crate::responses::DeleteResultResponse;
 use crate::responses::InsertOneResultResponse;
 use crate::responses::UpdateResultResponse;
 use mongodb::bson::{doc, Document};
-use mongodb::error::Error as MongoError;
 use mongodb::options::ClientOptions;
 use mongodb::options::FindOptions;
 use mongodb::Database as MongoDatabase;
@@ -78,6 +77,7 @@ impl Database {
             )
             .await?
             .into();
+
         Ok(update_result_response)
     }
 
@@ -147,8 +147,7 @@ impl Database {
             .aggregate(time_range.as_aggregation(), None)
             .await?;
 
-        let customer_list =
-            try_customer_list::<DeliveryCustomerList, _, _>(cursor).await;
+        let customer_list = try_customer_list(cursor).await;
 
         match customer_list {
             Ok(customer_list) => {
@@ -185,8 +184,7 @@ impl Database {
             )
             .await?;
 
-        let customer_list =
-            try_customer_list::<DeliveryCustomerList, _, _>(cursor).await;
+        let customer_list = try_customer_list(cursor).await;
 
         match customer_list {
             Ok(customer_list) => {
@@ -263,25 +261,13 @@ pub async fn setup_database() -> Result<Arc<Database>, AppError> {
     Ok(Arc::new(Database::new(mongodb_client)))
 }
 
-/// Builds a list of customers by driving the [`Cursor`] forward
-///
-/// `I` is the type that goes into the buffer.
-/// Must implement [`Serialize`] and [`Deserialize`]
-///
-/// `R` is the return value. `R` must implement `From<Vec<I>>`
-///
-/// `E` is the error type here, it must implement `From<MongoError>`
-pub async fn try_customer_list<R, I, E>(
+/// Try to drive the cursor to yield `Document`s
+pub async fn try_customer_list(
     mut cursor: Cursor<Document>
-) -> Result<R, E>
-where
-    Vec<I>: Into<R>,
-    Result<Document, MongoError>: TryInto<I, Error = E>,
-    MongoError: Into<E>
-{
+) -> Result<DeliveryCustomerList, AppError> {
     let mut buffer = Vec::with_capacity(10);
 
-    while cursor.advance().await.map_err(Into::into)? {
+    while cursor.advance().await? {
         let deserialized = cursor.deserialize_current().try_into()?;
         buffer.push(deserialized)
     }
