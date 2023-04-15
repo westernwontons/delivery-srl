@@ -1,8 +1,14 @@
+set export
+
 alias r := run
 alias b := build
 
+RUST_LOG := "tower_http=info,info"
+PRIVATE_KEY_PATH := "secrets/delivery_private_key.pem"
+PUBLIC_KEY_PATH := "secrets/delivery_public_key.pem"
+
 run:
-	RUST_LOG="tower_http=info,info" cargo run
+	cargo run
 
 build:
 	cargo build

@@ -10,6 +10,7 @@ use std::net::{IpAddr, SocketAddr};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::propagate_header::PropagateHeaderLayer;
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tower_http::trace::TraceLayer;
 
@@ -36,9 +37,7 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
     };
 
     tracing::info!("Binding app to 0.0.0.0:3000");
-    axum::Server::bind(&SocketAddr::new(host, port))
-        .serve(app.into_make_service())
-        .await?;
+    axum::Server::bind(&SocketAddr::new(host, port)).serve(app.into_make_service()).await?;
 
     Ok(())
 }
@@ -48,15 +47,14 @@ async fn run_app(app: Router) -> anyhow::Result<()> {
 /// Initializes the root router, middlewares and the app state
 #[tracing::instrument]
 async fn setup_app() -> Result<Router, AppError> {
+    let x_request_id_header = HeaderName::from_static("x-request-id");
+
     let middleware_stack = ServiceBuilder::new()
-        .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(
-            AUTHORIZATION
-        )))
+        .layer(SetSensitiveRequestHeadersLayer::new(std::iter::once(AUTHORIZATION)))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
-        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
-            "x-request-id"
-        )));
+        .layer(SetRequestIdLayer::new(x_request_id_header.clone(), MakeRequestUuid))
+        .layer(PropagateHeaderLayer::new(x_request_id_header));
 
     let app_state = setup_app_state().await?;
     tracing::info!("Application setup ok");

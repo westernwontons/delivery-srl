@@ -1,2 +1,3 @@
 tab_spaces = 4
 trailing_comma = "never"
+use_small_heuristics = "Max"
