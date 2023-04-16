@@ -20,12 +20,9 @@ async fn create_customer(
     State(state): State<AppState>,
     Json(customer): Json<DeliveryCustomerIn>
 ) -> Result<InsertOneResultResponse, AppError> {
-    tracing::info!(
-        "Inserting customer with customer_id={}",
-        &customer.customer_id
-    );
+    tracing::info!("Inserting customer with customer_id={}", &customer.customer_id);
 
-    state.database().insert_customer(customer).await
+    state.database().customer().insert_customer(customer).await
 }
 
 /// Edit a [`DeliveryCustomer`]
@@ -37,12 +34,9 @@ async fn update_customer(
     State(state): State<AppState>,
     Json(customer): Json<PartialDeliveryCustomer>
 ) -> Result<UpdateResultResponse, AppError> {
-    tracing::info!(
-        "Updating customer with customer_id={}",
-        &customer.customer_id
-    );
+    tracing::info!("Updating customer with customer_id={}", &customer.customer_id);
 
-    state.database().update_customer(customer).await
+    state.database().customer().update_customer(customer).await
 }
 
 /// Activate a [`DeliveryCustomer`]
@@ -59,7 +53,7 @@ async fn activate_customer(
 ) -> Result<UpdateResultResponse, AppError> {
     tracing::info!("Activating customer with customer_id={}", &customer_id);
 
-    state.database().activate_customer(customer_id).await
+    state.database().customer().activate_customer(customer_id).await
 }
 
 /// Deactivate a [`DeliveryCustomer`]
@@ -76,7 +70,7 @@ async fn deactivate_customer(
 ) -> Result<UpdateResultResponse, AppError> {
     tracing::info!("Deactivating customer with customer_id={}", &customer_id);
 
-    state.database().deactivate_customer(customer_id).await
+    state.database().customer().deactivate_customer(customer_id).await
 }
 
 /// Delete a [`DeliveryCustomer`]
@@ -90,7 +84,7 @@ async fn delete_customer(
 ) -> Result<DeleteResultResponse, AppError> {
     tracing::info!("Deleting customer with customer_id={}", &customer_id);
 
-    state.database().delete_customer(customer_id).await
+    state.database().customer().delete_customer(customer_id).await
 }
 
 /// Retrieve expired [`DeliveryCustomer`]s
@@ -104,7 +98,7 @@ async fn expired_customers(
 ) -> Result<DeliveryCustomerList, AppError> {
     tracing::info!("Retrieving expired customers");
 
-    state.database().expired_customers(query).await
+    state.database().customer().expired_customers(query).await
 }
 
 /// Router for client related operations.

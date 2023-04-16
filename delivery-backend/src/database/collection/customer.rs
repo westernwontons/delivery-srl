@@ -1,32 +1,24 @@
-use crate::customer::DeliveryCustomerIn;
-use crate::customer::DeliveryCustomerList;
-use crate::error::AppError;
-use crate::query::ExpiredCustomersQuery;
-use crate::query::PartialDeliveryCustomer;
-use crate::query::SearchQuery;
-use crate::responses::DeleteResultResponse;
-use crate::responses::InsertOneResultResponse;
-use crate::responses::UpdateResultResponse;
-use mongodb::bson::{doc, Document};
-use mongodb::options::ClientOptions;
-use mongodb::options::FindOptions;
-use mongodb::Database as MongoDatabase;
-use mongodb::{Client as MongoClient, Cursor};
-use mongodb::{Collection as MongoCollection, IndexModel};
-use std::env;
 use std::sync::Arc;
-use std::time::Duration;
 
-/// Represents the connection to the database
-///
-/// Uses a [`MongoClient`] internally
-pub struct Database {
-    client: MongoClient
+use mongodb::{
+    bson::{doc, Document},
+    options::FindOptions,
+    Client as MongoClient, Collection as MongoCollection, Database as MongoDatabase
+};
+
+use crate::customer::{DeliveryCustomerIn, DeliveryCustomerList};
+use crate::database::customer_list::try_customer_list;
+use crate::error::AppError;
+use crate::query::{ExpiredCustomersQuery, PartialDeliveryCustomer, SearchQuery};
+use crate::responses::{DeleteResultResponse, InsertOneResultResponse, UpdateResultResponse};
+
+pub struct CustomerCollection {
+    client: Arc<MongoClient>
 }
 
-impl Database {
-    /// Creates a new [`Database`].
-    pub fn new(client: MongoClient) -> Self {
+impl CustomerCollection {
+    /// Creates a new [`CustomerCollection`].
+    pub fn new(client: Arc<MongoClient>) -> Self {
         Self { client }
     }
 
@@ -142,10 +134,8 @@ impl Database {
         &self,
         time_range: ExpiredCustomersQuery
     ) -> Result<DeliveryCustomerList, AppError> {
-        let cursor = self
-            .customer_collection()
-            .aggregate(time_range.as_aggregation(), None)
-            .await?;
+        let cursor =
+            self.customer_collection().aggregate(time_range.as_aggregation(), None).await?;
 
         let customer_list = try_customer_list(cursor).await;
 
@@ -175,9 +165,7 @@ impl Database {
             .customer_collection()
             .find(
                 doc! { "$text": { "$search": &search.query } },
-                FindOptions::builder()
-                    .sort(doc! { "score": { "$meta": "textScore" } })
-                    .build()
+                FindOptions::builder().sort(doc! { "score": { "$meta": "textScore" } }).build()
             )
             .await?;
 
@@ -185,11 +173,7 @@ impl Database {
 
         match customer_list {
             Ok(customer_list) => {
-                tracing::info!(
-                    "Found {} customers. Query used: {}",
-                    customer_list.len(),
-                    &search
-                );
+                tracing::info!("Found {} customers. Query used: {}", customer_list.len(), &search);
                 Ok(customer_list)
             }
             Err(err) => {
@@ -198,73 +182,4 @@ impl Database {
             }
         }
     }
-}
-
-/// Initialize the [`Database`] with a MongoDB [`MongoClient`]
-#[tracing::instrument]
-pub async fn setup_database() -> Result<Arc<Database>, AppError> {
-    let mongo_url = env::var("MONGO_URL").unwrap_or_else(|_| {
-        tracing::info!("MONGO_URL not set, using default");
-
-        "mongodb://127.0.0.1:27017".into()
-    });
-
-    let mut options = ClientOptions::parse(mongo_url).await?;
-
-    let mongo_timeout_duration_default = 3;
-    match env::var("MONGO_TIMEOUT_DURATION") {
-        Ok(duration) => {
-            match duration.parse::<u64>() {
-                Ok(parsed_duration) => {
-                    options.connect_timeout = Some(Duration::from_secs(parsed_duration));
-                }
-                Err(error) => {
-                    tracing::info!("Failed to parse MONGO_TIMEOUT_DURATION={duration} into integer: {error}. Using default");
-                    options.connect_timeout =
-                        Some(Duration::from_secs(mongo_timeout_duration_default));
-                }
-            };
-        }
-
-        Err(_) => {
-            options.connect_timeout = Some(Duration::from_secs(mongo_timeout_duration_default));
-
-            tracing::info!("MONGO_TIMEOUT_DURATION not set, using default");
-        }
-    };
-
-    options.direct_connection = Some(true);
-
-    tracing::info!("MongoDB connection type: {:?}", options.direct_connection);
-
-    let mongodb_client = MongoClient::with_options(options)?;
-
-    tracing::info!("Setting up indexes");
-
-    mongodb_client
-        .database("delivery_database")
-        .collection::<Document>("customer")
-        .create_index(
-            IndexModel::builder().keys(doc! { "$**": "text" }).build(),
-            None
-        )
-        .await?;
-
-    tracing::info!("Index setup complete");
-
-    Ok(Arc::new(Database::new(mongodb_client)))
-}
-
-/// Try to drive the cursor to yield `Document`s
-pub async fn try_customer_list(
-    mut cursor: Cursor<Document>
-) -> Result<DeliveryCustomerList, AppError> {
-    let mut buffer = Vec::with_capacity(10);
-
-    while cursor.advance().await? {
-        let deserialized = cursor.deserialize_current().try_into()?;
-        buffer.push(deserialized)
-    }
-
-    Ok(buffer.into())
 }

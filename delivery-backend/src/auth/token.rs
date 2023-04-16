@@ -13,5 +13,5 @@ pub fn generate_token(username: &str) -> String {
 ///
 /// Returns the entire decoded token (header and claims)
 pub fn verify_and_decode_token(token: &str) -> Result<TokenData<Claims>, JwtError> {
-    Ok(decode::<Claims>(token, &KEYS.decoding, &Validation::new(Algorithm::ES256))?)
+    decode::<Claims>(token, &KEYS.decoding, &Validation::new(Algorithm::ES256))
 }

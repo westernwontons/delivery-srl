@@ -12,5 +12,5 @@ pub async fn customer_search(
 ) -> Result<DeliveryCustomerList, AppError> {
     tracing::info!("Search query: {}", search);
 
-    state.database().search_customers(search).await
+    state.database().customer().search_customers(search).await
 }

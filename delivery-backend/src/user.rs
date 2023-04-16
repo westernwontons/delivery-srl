@@ -1,3 +1,6 @@
+use std::convert::Infallible;
+use std::ops::Deref;
+
 use axum::extract::{rejection::JsonRejection, FromRequest};
 use axum::http::HeaderValue;
 use axum::response::IntoResponse;
@@ -12,9 +15,17 @@ pub struct User {
     pub password: String
 }
 
-/// An [`User`] that's encoded in JSON
+/// A [`User`] that's encoded in JSON
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct JsonEncodedUser(pub User);
+
+impl Deref for JsonEncodedUser {
+    type Target = User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[axum::async_trait]
 impl<S, B> axum::extract::FromRequest<S, B> for JsonEncodedUser
@@ -29,7 +40,7 @@ where
         let request_id = req
             .headers()
             .get("x-request-id")
-            .map(|r| r.to_owned())
+            .cloned()
             .unwrap_or(HeaderValue::from_static("NOTSET"));
         match Json::<User>::from_request(req, state).await {
             Ok(Json(user)) => {
@@ -50,6 +61,8 @@ where
         }
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, thiserror::Error)]
 pub enum UserError {
@@ -82,11 +95,11 @@ impl IntoResponse for UserError {
                 (StatusCode::UNPROCESSABLE_ENTITY, Json(json_value)).into_response()
             }
             UserError::JsonRejection(rejection) => match rejection {
-                JsonRejection::JsonDataError(error) => Err::<(), _>((
+                JsonRejection::JsonDataError(error) => Err::<Infallible, _>((
                     error.status(),
                     Json(json!({ "missing_field": error.body_text() }))
                 )),
-                other => Err::<(), _>((other.status(), Json(other.body_text().into())))
+                other => Err::<Infallible, _>((other.status(), Json(other.body_text().into())))
             }
             .into_response()
         }

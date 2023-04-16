@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use crate::database::{setup_database, Database};
-use crate::error::AppError;
+use crate::{
+    database::{setup_database, Database},
+    error::AppError
+};
 
 /// Global, app level state
 ///

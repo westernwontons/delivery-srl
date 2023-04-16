@@ -11,6 +11,11 @@ impl DeliveryCustomerList {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    /// Returns `true` if the underlying vector contains no elements
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl IntoResponse for DeliveryCustomerList {
