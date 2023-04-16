@@ -1,8 +1,8 @@
 pub mod appliance_field;
+pub mod auth;
 pub mod customer;
 pub mod database;
 pub mod error;
-pub mod jwt;
 pub mod query;
 pub mod responses;
 pub mod routers;

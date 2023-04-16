@@ -10,12 +10,11 @@ use std::io::Read;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use chrono::{Duration, Utc};
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
-use jsonwebtoken::{
-    decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation
-};
+use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
 use serde_json::json;
 
+/// Private and public key pair
 pub static KEYS: Lazy<Keys> = Lazy::new(|| {
     let private_key_path =
         env::var("PRIVATE_KEY_PATH").expect("Env var PRIVATE_KEY_PATH is not set");
@@ -37,20 +36,6 @@ pub static KEYS: Lazy<Keys> = Lazy::new(|| {
     Keys::from_ec_keys(private_key.as_slice(), public_key.as_slice())
         .expect("Failed to acquire encoding and decoding keys")
 });
-
-/// Generate a JWT where `sub` is the username
-pub fn generate_token(username: &str) -> String {
-    let claims = Claims::new(username.to_owned());
-    encode(&Header::new(Algorithm::ES256), &claims, &KEYS.encoding)
-        .expect("Failed to generate token")
-}
-
-/// Decode and verify a JWT token
-///
-/// Returns the entire decoded token (header and claims)
-pub fn verify_and_decode_token(token: &str) -> Result<TokenData<Claims>, JwtError> {
-    Ok(decode::<Claims>(token, &KEYS.decoding, &Validation::new(Algorithm::ES256))?)
-}
 
 /// Keys to encode and decode a JWT
 pub struct Keys {
@@ -80,7 +65,7 @@ impl Claims {
     /// Creates a new [`Claims`].
     ///
     /// The `sub` is the unique identifier
-    fn new(sub: String) -> Self {
+    pub fn new(sub: String) -> Self {
         Self { sub, exp: (Utc::now() + Duration::minutes(15)).timestamp() as usize }
     }
 }
