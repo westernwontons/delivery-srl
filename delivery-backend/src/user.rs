@@ -8,11 +8,21 @@ use axum::{http::StatusCode, Json};
 use serde_json::json;
 use validator::{Validate, ValidationErrors};
 
-#[derive(Debug, Validate, serde::Serialize, serde::Deserialize)]
+/// Note: The debug implementation purposefully redacts the `password` field ignores
+#[derive(Validate, serde::Serialize, serde::Deserialize)]
 pub struct User {
     #[validate(length(min = 3, message = "Username must be at least 3 characters long"))]
     pub username: String,
     pub password: String
+}
+
+impl std::fmt::Debug for User {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("User")
+            .field("username", &self.username)
+            .field("password", &"REDACTED" as &dyn std::fmt::Debug)
+            .finish()
+    }
 }
 
 /// A [`User`] that's encoded in JSON

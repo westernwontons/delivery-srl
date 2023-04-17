@@ -12,7 +12,7 @@ use chrono::Utc;
 
 /// Login a [`User`]
 #[axum_macros::debug_handler]
-#[tracing::instrument]
+#[tracing::instrument(skip(state))]
 async fn login(
     State(state): State<AppState>,
     user: JsonEncodedUser
@@ -43,14 +43,15 @@ async fn login(
 
 /// Logout a [`User`]
 #[axum_macros::debug_handler]
-#[tracing::instrument]
+#[tracing::instrument(skip(state))]
+#[allow(unused_variables)]
 async fn logout(State(state): State<AppState>) {}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Validate a refresh token and issue a new acces_token if it is
 #[axum_macros::debug_handler]
-#[tracing::instrument]
+#[tracing::instrument(skip(state))]
 async fn refresh_token(
     State(state): State<AppState>,
     Json(token): Json<RefreshToken>
@@ -76,5 +77,5 @@ pub fn auth_router() -> Router<AppState> {
     Router::new()
         .route("/login", post(login))
         .route("/logout", post(logout))
-        .route("/validate", post(refresh_token))
+        .route("/refresh", post(refresh_token))
 }
