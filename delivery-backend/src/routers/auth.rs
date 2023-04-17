@@ -1,5 +1,6 @@
 use crate::auth::jwt::{
-    generate_refresh_token, AuthBody, AuthBodyWithRefreshToken, AuthError, RefreshToken
+    generate_refresh_token, tokens_are_equal, AuthBody, AuthBodyWithRefreshToken, AuthError,
+    RefreshToken
 };
 use crate::auth::verify::generate_token;
 use crate::error::AppError;
@@ -49,7 +50,7 @@ async fn logout(State(state): State<AppState>) {}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Validate a refresh token and issue a new acces_token if it is
+/// Validate a refresh token and issue a new acces_token if it is valid
 #[axum_macros::debug_handler]
 #[tracing::instrument(skip(state))]
 async fn refresh_token(
@@ -59,7 +60,11 @@ async fn refresh_token(
     match state.store().get(&token.id) {
         Some(stored_refresh_token) => {
             let now = Utc::now().timestamp() as usize;
-            stored_refresh_token.value().lock().unwrap().exp > now
+            let lock = stored_refresh_token.value().lock().unwrap();
+            match tokens_are_equal(&token, &lock) {
+                true => lock.exp > now,
+                false => return Err(AppError::AuthError(AuthError::InvalidToken))
+            }
         }
         None => {
             tracing::info!(authentication = "failed", reason = "WrongCredentials");
@@ -71,6 +76,8 @@ async fn refresh_token(
 
     Ok(AuthBody::new_bearer(generate_token(&token.id)))
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// [`Router`] that is concerned about authentication
 pub fn auth_router() -> Router<AppState> {

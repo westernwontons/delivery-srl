@@ -7,6 +7,7 @@ use std::env;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
+use std::sync::MutexGuard;
 
 use crate::auth::verify::verify_and_decode_token;
 use axum::headers::authorization::Bearer;
@@ -235,7 +236,7 @@ impl IntoResponse for AuthError {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// A [`RefreshToken`] that is used to create new JWTs for users
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RefreshToken {
     pub id: String,
     pub token: String,
@@ -260,4 +261,9 @@ pub fn generate_refresh_token() -> RefreshToken {
     let exp = (Utc::now() + Duration::days(5)).timestamp() as usize;
 
     RefreshToken { id, token, exp }
+}
+
+/// Check that two `RefreshToken`s are equal, where `rhs` is protected by a `Mutex`
+pub fn tokens_are_equal(lhs: &RefreshToken, rhs: &MutexGuard<'_, RefreshToken>) -> bool {
+    lhs.exp == rhs.exp && lhs.id == rhs.id && lhs.token == rhs.token
 }
