@@ -12,6 +12,7 @@ use super::collection::{CustomerCollection, UserCollection};
 /// Represents the connection to the database
 ///
 /// Uses a [`MongoClient`] internally
+#[derive(Debug)]
 pub struct Database {
     client: Arc<MongoClient>
 }

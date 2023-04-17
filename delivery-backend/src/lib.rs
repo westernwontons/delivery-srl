@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod appliance_field;
 pub mod auth;
 pub mod customer;

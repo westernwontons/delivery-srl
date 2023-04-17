@@ -8,6 +8,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 
+use crate::auth::verify::verify_and_decode_token;
 use axum::headers::authorization::Bearer;
 use axum::headers::Authorization;
 use axum::http::request::Parts;
@@ -17,9 +18,10 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use once_cell::sync::Lazy;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-
-use crate::auth::token::verify_and_decode_token;
 
 /// Private and public key pair
 pub static KEYS: Lazy<Keys> = Lazy::new(|| {
@@ -61,10 +63,10 @@ impl Keys {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The claims in a JWT
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     sub: String,
     exp: usize
@@ -75,7 +77,7 @@ impl Claims {
     ///
     /// The `sub` is the unique identifier and exp is the expiration date
     ///
-    /// It's `now + 15` minutes by default
+    /// It's `now + 15 minutes` by default
     pub fn new(sub: String) -> Self {
         Self { sub, exp: (Utc::now() + Duration::minutes(15)).timestamp() as usize }
     }
@@ -110,16 +112,17 @@ where
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// The response to a successful authentication
-#[derive(Debug, serde::Serialize)]
+/// Carries an access token, which is a JWT and it's type
+///
+/// Note: the type is always `Bearer`
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthBody {
     access_token: String,
     token_type: String
 }
 
-#[allow(dead_code)]
 impl AuthBody {
     /// Create a new `Bearer: <token>` type [`AuthBody`]
     pub fn new_bearer(access_token: String) -> Self {
@@ -143,11 +146,32 @@ impl IntoResponse for AuthBody {
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AuthBodyWithRefreshToken {
+    auth_body: AuthBody,
+    refresh_token: RefreshToken
+}
+
+impl AuthBodyWithRefreshToken {
+    /// Creates a new [`AuthBodyWithRefreshToken`].
+    pub fn new(auth_body: AuthBody, refresh_token: RefreshToken) -> Self {
+        Self { auth_body, refresh_token }
+    }
+}
+
+impl IntoResponse for AuthBodyWithRefreshToken {
+    fn into_response(self) -> axum::response::Response {
+        (StatusCode::CREATED, Json(self)).into_response()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// The possible errors when a user attempts to authenticate
 #[allow(dead_code)]
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum AuthError {
     WrongCredentials,
     MissingCredentials,
@@ -206,4 +230,34 @@ impl IntoResponse for AuthError {
         let body = Json(json!({ "error": error_message }));
         (status, body).into_response()
     }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// A [`RefreshToken`] that is used to create new JWTs for users
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RefreshToken {
+    pub id: String,
+    pub token: String,
+    pub exp: usize
+}
+
+impl IntoResponse for RefreshToken {
+    fn into_response(self) -> axum::response::Response {
+        (StatusCode::CREATED, Json(self)).into_response()
+    }
+}
+
+/// Generate `size` amount of random alphanumeric characters
+pub fn generate_random_alphanumeric(size: usize) -> String {
+    rand::thread_rng().sample_iter(&Alphanumeric).take(size).map(char::from).collect()
+}
+
+/// Generate a refresh token that's valid for 5 days
+pub fn generate_refresh_token() -> RefreshToken {
+    let token = generate_random_alphanumeric(32);
+    let id = generate_random_alphanumeric(8);
+    let exp = (Utc::now() + Duration::days(5)).timestamp() as usize;
+
+    RefreshToken { id, token, exp }
 }

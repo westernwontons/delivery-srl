@@ -1,3 +1,4 @@
+use axum::extract::rejection::TypedHeaderRejection;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use mongodb::bson::de::Error as BsonDeError;
 use mongodb::error::Error as MongoError;
@@ -12,7 +13,9 @@ pub enum AppError {
     #[error("BsonDeError: {0}")]
     BsonError(#[from] BsonDeError),
     #[error(transparent)]
-    AuthError(#[from] AuthError)
+    AuthError(#[from] AuthError),
+    #[error(transparent)]
+    HeaderError(#[from] TypedHeaderRejection)
 }
 
 impl IntoResponse for AppError {
@@ -32,6 +35,7 @@ impl IntoResponse for AppError {
             AppError::AuthError(error) => {
                 (StatusCode::FORBIDDEN, Json(json!({ "error": error }))).into_response()
             }
+            AppError::HeaderError(_) => StatusCode::NOT_FOUND.into_response()
         }
     }
 }
