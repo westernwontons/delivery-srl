@@ -7,7 +7,6 @@ use std::env;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
-use std::sync::MutexGuard;
 
 use crate::auth::verify::verify_and_decode_token;
 use axum::headers::authorization::Bearer;
@@ -264,6 +263,6 @@ pub fn generate_refresh_token() -> RefreshToken {
 }
 
 /// Check that two `RefreshToken`s are equal, where `rhs` is protected by a `Mutex`
-pub fn tokens_are_equal(lhs: &RefreshToken, rhs: &MutexGuard<'_, RefreshToken>) -> bool {
+pub fn tokens_are_equal(lhs: &RefreshToken, rhs: &RefreshToken) -> bool {
     lhs.exp == rhs.exp && lhs.id == rhs.id && lhs.token == rhs.token
 }

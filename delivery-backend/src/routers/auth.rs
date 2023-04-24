@@ -60,9 +60,9 @@ async fn refresh_token(
     match state.store().get(&token.id) {
         Some(stored_refresh_token) => {
             let now = Utc::now().timestamp() as usize;
-            let lock = stored_refresh_token.value().lock().unwrap();
-            match tokens_are_equal(&token, &lock) {
-                true => lock.exp > now,
+            let stored_refresh_token = stored_refresh_token.value();
+            match tokens_are_equal(&token, stored_refresh_token) {
+                true => stored_refresh_token.exp > now,
                 false => return Err(AppError::AuthError(AuthError::InvalidToken))
             }
         }
